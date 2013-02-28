@@ -25,18 +25,6 @@ spots = Spots(images.cubes[0])
 #spots.assign_pixels(options.red_spot_leve).filter_tight_pixels()
 spots.detect_cc(options.red_spot_level)
 
-#log(sorted(spots.pixels, key=lambda(z,y,x):(z,x,y)))
-log("Saving temporary image...")
-#im = Image.new('RGB', images.images[0].size)
-spots.draw_flat(images.flattened()).save('tmp.png')
-
-#print ">>>"
-#print spots.assign_sizes().sizes
-#print spots.assign_sizes().sizes[0]
-#print spots.spots[0]
-#print spots.cube[spots.spots[0]]
-#print "<<<"
-
 log("Filtering spots...")
 spots.filter_by_size(options.min_spot_size, options.max_spot_size)
 
@@ -53,9 +41,6 @@ for spot in spots.spots:
 	images.cubes[0][spot] = 255
 images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
 images.from_cubes()
-#spots.assign_few_colors([(255,0,0)], force=True)
-#spots.draw_flat(images.flattened()).save('tmp2.png')
-#spots.draw_3D(images)
 images.flattened().save('tmp2.png')
 images.save("tmp-{n:02}.png")
 
