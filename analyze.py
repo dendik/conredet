@@ -35,12 +35,6 @@ import numpy as np
 
 class Spots(object):
 
-	# # XXX
-	# def spots_r(self): return self._spots
-	# def spots_w(self, v): log(len(v) and map(type, v[0])); self._spots=v
-	# spots = property(spots_r, spots_w)
-	# # XXX
-
 	def __init__(self, cube, colors=None):
 		if isinstance(cube, Spots):
 			vars(self).update(vars(cube))
@@ -97,19 +91,6 @@ class Spots(object):
 	def __sub__(self, other):
 		"""Return set of spots minus pixels in `other` spots with same ids."""
 		result = Spots(self.cube, colors=self.colors)
-
-		###
-		#spots1 = self.as_dict()
-		#spots2 = other.as_dict()
-		#spots = {}
-		#for pixel in spots1:
-		#	if pixel not in spots2:
-		#		spot = spots.setdefault(spots1[pixel], [[],[],[]])
-		#		spot[0].append(pixel[2])
-		#		spot[1].append(pixel[1])
-		#		spot[2].append(pixel[0])
-		#result.spots = [spots.get(n, ((),(),())) for n in range(max(spots))]
-
 		spot2 = set()
 		for spot in other.spots:
 			spot2 |= set(izip(*spot))
@@ -117,14 +98,6 @@ class Spots(object):
 			spot1 = set(izip(*spot))
 			spot3 = zip(*sorted(spot1 - spot2))
 			result.spots.append(spot3)
-
-		###
-		#for spot1, spot2 in izip(self.spots, other.spots):
-		#	spot1 = set(map(tuple, np.transpose(spot1).tolist()))
-		#	spot2 = set(map(tuple, np.transpose(spot2).tolist()))
-		#	spot3 = zip(*sorted(spot1 - spot2))
-		#	log(len(spot1), len(spot2), "=>", len(spot1 - spot2), "=", len(spot3[0]))
-		#	result.spots.append(spot3)
 		return result
 
 	def assign_pixels(self, level, force=False):
