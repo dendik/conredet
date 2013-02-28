@@ -27,109 +27,114 @@ Naming:
 	* cube -- representation of series of 1-color images as a 3D numpy array
 
 """
+import sys
+import random
 from itertools import count
 from PIL import Image, ImageChops
 import numpy as np
 
 class Spots(object):
-	def __init__(self, cube, level, colors=None):
+
+	def __init__(self, cube, colors=None):
+		if isinstance(cube, Spots):
+			vars(self).update(vars(cube))
+			return
 		self.cube = cube
-		self.level = level
 		self.pixels = set()
 		self.spots = []
 		self.sizes = {}
 		self.colors = colors or {}
 
-	def detect_pixels(self):
-		"""Return list of coordinates of pixels above level."""
-		self.pixels = set(zip((self.cube > self.level).nonzero()))
-
-	def detect_cc(self):
+	def detect_cc(self, level):
 		"""Detect spots as connected components of intensive pixels."""
-		if not self.pixels:
-			self.detect_pixels()
+		self.assign_pixels(level)
 		edges = {}
 		for pixel in self.pixels:
 			for other in xyzvrange(pixel):
 				if other in self.pixels:
 					edges.setdefault(pixel, []).append(other)
-		for coords in enumerate(find_components(edges)):
-			for coord in coords:
-				self.spots[coord] = spot
+		self.spots = [zip(*sorted(coords))
+			for coords in find_components(edges)]
 		return self
 
-	def detect_tight(self, neighbors, distance):
-		"""Detect groups of pixels, with at least `neighbors` in `distance`"""
-		if not self.pixels:
-			self.detect_pixels()
-		spot = iter(count(1))
-		for pixel in sorted(self.pixels):
-			neighborhood = [other
-				for other in xyzrange(distance) if other in self.pixels]
-			if len(neighborhood) > neighbors:
-				spot_ids = set(self.spots[other]
-					for other in neighborhood if other in self.spots)
-				assert len(spot_ids) <= 1
-				if not spot_ids:
-					spot_ids.add(spot.next())
-				self.spots[pixel] = spot_ids.pop()
+	def filter_tight_pixels(self, neighbors=15, distance=1):
+		"""Remove pixels that don't have enough significant neighbors."""
+		self.pixels = [pixel
+			for pixel in self.pixels
+			if neighbors <= len([other
+				for other in xyzrange(pixel, distance)
+				if other in self.pixels])]
 		return self
 
 	def filter_by_size(self, min_size, max_size):
 		"""Remove spots not fitting in the given size range."""
-		if not self.sizes:
-			self.assign_sizes()
-		self.spots = dict((pixel, spot)
-			for pixel, spot in self.spots.iteritems()
-			if min_size <= self.sizes[spot] <= max_size
-		)
+		self.assign_sizes()
+		self.spots = [spot
+			for n, spot in enumerate(self.spots)
+			if min_size <= self.sizes[n] <= max_size]
+		self.sizes = [] # indices gone wrong
 		return self
 
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
-		result = Spots(self.cube, self.level, colors=self.colors)
-		for pixel in self.spots:
-			for other in xyzrange(pixel, d):
-				result.spots[other] = self.spots[pixel]
+		result = Spots(self.cube, colors=self.colors)
+		for n, spot in enumerate(self.spots):
+			coords = set(map(tuple, np.transpose(spot).tolist()))
+			for coord in set(coords):
+				coords |= set(xyzrange(coord, d))
+			self.spots[n] = zip(*sorted(coords))
 		return result
 
 	def __sub__(self, other):
 		"""Return set of spots minus pixels in `other` spots with same ids."""
-		result = Spots(self.cube, self.level, colors=self.colors)
-		for pixel in self.spots:
-			if other.spots.get(pixel) == self.spots[pixel]:
-				continue
-			result.spots[pixel] = self.spots[pixel]
+		result = Spots(self.cube, colors=self.colors)
+		for spot1, spot2 in zip(self.spots, other.spots):
+			spot1 = set(np.transpose(spot1).tolist())
+			spot2 = set(np.transpose(spot2).tolist())
+			spot3 = zip(*sorted(spot1 - spot2))
+			result.spots.append(spot3)
 		return result
 
-	def assign_sizes(self):
+	def assign_pixels(self, level, force=False):
+		"""Detect list of coordinates of pixels above level."""
+		if force or not self.pixels:
+			coords = (self.cube > level).nonzero()
+			self.pixels = set(zip(*coords))
+		return self
+
+	def assign_sizes(self, force=False):
 		"""Return a dictionary of spot sizes."""
-		self.sizes = {}
-		for pixel, spot in self.spots.iteritems():
-			self.sizes[spot] = self.sizes.get(spot, 0) + 1
+		if not force and self.sizes:
+			return self
+		self.sizes = dict((n, len(spot)) for n, spot in enumerate(self.spots))
 		return self
 
 	def assign_few_colors(self,
-			possible_colors=[(0,255,0), (0,128,0), (0,255,128), (0,128,255)]):
+			possible_colors=[(0,255,0), (0,128,0), (0,255,128), (0,128,255)],
+			force=False):
 		"""Assign as few as possible colors to spots ."""
+		if self.colors and not force:
+			return self
 		self.colors = dict((spot, possible_colors[0])
 			for spot in set(self.ids()))
+		spots = self.as_dict()
 		for next_color in possible_colors[1:]:
-			for pixel in self.spots:
+			for pixel in spots:
 				for other in xyzrange(pixel, 3):
-					if other in self.spots:
-						s1 = self.spots[pixel]
-						s2 = self.spots[other]
+					if other != pixel and other in self.spots:
+						s1 = spots[pixel]
+						s2 = spots[other]
 						if s1 != s2 and self.colors[s1] == self.colors[s2]:
 							self.colors[s1] = next_color
 							break
 		return self
 
-	def assign_random_colors(self, r=True, g=True, b=True):
+	def assign_random_colors(self, r=None, g=None, b=None, force=False):
 		"""Aggign random color to each spot."""
-		v = lambda: return random.randint(128, 255)
-		self.colors = dict((spot, (r and v(), g and v(), b and v()))
-			for spot in set(self.ids()))
+		if self.colors and not force:
+			return self
+		v = lambda x: (x is None) and random.randint(128, 255) or x
+		self.colors = dict((spot, (v(r), v(g), v(b))) for spot in set(self.ids()))
 		return self
 
 	def draw_flat(self, image):
@@ -138,53 +143,81 @@ class Spots(object):
 
 	def draw_3D(self, images):
 		"""Draw spots on a stack of images."""
-		if not self.colors:
-			self.assign_random_colors()
-		for x, y, z in spots:	
-			images[z].putpixel((x,y), colors[spots[x,y,z]])
+		self.assign_random_colors()
+		spots = self.as_dict()
+		for (x, y, z), spot in spots.iteritems():
+			images[z].putpixel((x,y), self.colors[spot])
 
 	def ids(self):
 		"""Return a list of available spot ids"""
-		return self.spots.values()
+		return range(len(self.spots))
 
-	def quantiles(self, quantile, cube=None):
+	def quantiles(self, quantile):
 		"""Find quantile value for each spot in `self.quantiles`."""
-		values = {}
-		for pixel in self.spots:
-			values.setdefault(self.spots[pixel], []).append((cube or self.cube)[pixel])
-		for spot in values:
-			values[spot].sort()
+		values = self.values()
 		quantiles = {}
 		for spot in values:
 			value = values[spot]
 			quantiles[spot] = value[int(quantile * len(value))]
 		return quantiles
 
+	def values(self):
+		"""Return dict of sorted list of pixel values in each spot."""
+		values = {}
+		for n, spot in enumerate(self.spots):
+			values[n] = sorted(self.cube[spot].tolist())
+		return values
+
 	def normalized_cube(self, quantile=0.75, level=100):
-		""" """
+		"""Return cube"""
 		quantiles = self.quantiles(quantile)
 		result = np.zeros(self.cube.shape, dtype='uint8')
-		for spot in quantile:
-			offset = level - quantile[spot]
-			
+		for spot in quantiles:
+			offset = level - quantiles[spot]
+			result[self.spots[spot]] = self.cube[self.spots] - offset
+		return result
+
+	def occupancies(self, level):
+		"""Return a dictionary of number of pixels above level in each spot."""
+		return dict((n, len((self.cube[spot] > level).nonzero()))
+			for n, spot in enumerate(self.spots))
+
+	def as_dict(self):
+		"""Return spots as a dict of (x,y,z)->spot_num."""
+		spots = {}
+		for n, spot in enumerate(self.spots):
+			for z, y, x in spot.transpose().tolist():
+				spots[x, y, z] = n
+		return spots
 
 class Images(object):
 	def __init__(self, filenames):
-		self.images = Image3d([Image.open(f).convert('RGB') for f in filenames])
+		self.images = [Image.open(f).convert('RGB') for f in filenames]
 		self.cubes = (None, None, None)
-	
+
 	def flattened(self):
 		"""Return PIL image composed of all layers."""
 		return reduce(ImageChops.lighter, self.images)
 
 	def normalized_in(self, spots, quantile, levels):
 		"""Return new Images with `neighborhood` pixels around each spot normalized."""
+		self.assign_cubes()
 		for i in range(3):
 			quantiles = spots.quantiles(quantile, self.cubes[i])
+			# XXX
 
-
-	def assign_cubes(self):
-		...
+	def assign_cubes(self, force=False):
+		"""Convert images to three 3D numy arrays (by color component)."""
+		if self.cubes != (None, None, None) and not force:
+			return self
+		assert all(image.size == self.images[0].size for image in self.images)
+		im_split = [im.split() for im in self.images]
+		im_shape = (len(self.images),) + self.images[0].size
+		self.cubes = [
+			np.fromstring("".join(im.tostring() for im in images), 'uint8').reshape(im_shape)
+			for images in zip(*im_split)
+		]
+		return self
 
 ### Functions
 
@@ -192,16 +225,6 @@ def merge_red_green(image_red, image_green):
 	"""Return PIL image composed of	`image_red`'s R values for red, ditto for G."""
 	image_blue = Image.new('RGB', image_red.size)
 	return Image.merge('RGB', (image_red, image_green, image_blue))
-
-def images_to_cube(images):
-	"""Convert grayscale images to a 3D numpy array."""
-	assert all(image.size == images[0].size for image in images)
-	assert all(image.mode == 'L' for image in images)
-	a = np.fromstring("".join(im.tostring() for im in images), 'uint8')
-	a.shape = image[0].size + (len(images),)
-	return a
-
-def load_all(filenames):
 
 ### Helpers
 
@@ -220,7 +243,7 @@ def find_components(edges):
 		components.append(component)
 	return components
 
-def xyzvrange(x0, y0, z0):
+def xyzvrange((x0, y0, z0)):
 	"""Iterate over coords of neighbors differing in exactly one coord."""
 	yield x0 - 1, y0, z0
 	yield x0, y0 - 1, z0
@@ -231,7 +254,14 @@ def xyzvrange(x0, y0, z0):
 
 def xyzrange((x0, y0, z0), d=1):
 	"""Iterate over coords in neighbourhood of point `xyz` of size `d`."""
-	for x in xrange(x0 - d, x0 + d + 1):
-		for y in xrange(y0 - d, y0 + d + 1):
-			for z in xrange(z0 - d, z0 + d + 1):
+	try:
+		dx, dy, dz = d
+	except Exception:
+		dx = dy = dz = d
+	for x in xrange(x0 - dx, x0 + dx + 1):
+		for y in xrange(y0 - dy, y0 + dy + 1):
+			for z in xrange(z0 - dz, z0 + dz + 1):
 				yield x, y, z
+
+def log(*args):
+	sys.stderr.write(" ".join(map(str, args)) + "\n")
