@@ -29,11 +29,17 @@ Naming:
 """
 import sys
 import random
-from itertools import count
+from itertools import count, izip
 from PIL import Image, ImageChops
 import numpy as np
 
 class Spots(object):
+
+	# # XXX
+	# def spots_r(self): return self._spots
+	# def spots_w(self, v): log(len(v) and map(type, v[0])); self._spots=v
+	# spots = property(spots_r, spots_w)
+	# # XXX
 
 	def __init__(self, cube, colors=None):
 		if isinstance(cube, Spots):
@@ -77,36 +83,62 @@ class Spots(object):
 
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
+		Z, Y, X = np.array(self.cube.shape)
 		result = Spots(self.cube, colors=self.colors)
 		for n, spot in enumerate(self.spots):
 			coords = set(map(tuple, np.transpose(spot).tolist()))
 			for coord in set(coords):
 				coords |= set(xyzrange(coord, d))
-			self.spots[n] = zip(*sorted(coords))
+			coords = [(z, y, x) for z, y, x in coords
+				if 0 <= z < Z and 0 <= y < Y and 0 <= x < X]
+			result.spots.append(zip(*sorted(coords)))
 		return result
 
 	def __sub__(self, other):
 		"""Return set of spots minus pixels in `other` spots with same ids."""
 		result = Spots(self.cube, colors=self.colors)
-		for spot1, spot2 in zip(self.spots, other.spots):
-			spot1 = set(np.transpose(spot1).tolist())
-			spot2 = set(np.transpose(spot2).tolist())
+
+		###
+		#spots1 = self.as_dict()
+		#spots2 = other.as_dict()
+		#spots = {}
+		#for pixel in spots1:
+		#	if pixel not in spots2:
+		#		spot = spots.setdefault(spots1[pixel], [[],[],[]])
+		#		spot[0].append(pixel[2])
+		#		spot[1].append(pixel[1])
+		#		spot[2].append(pixel[0])
+		#result.spots = [spots.get(n, ((),(),())) for n in range(max(spots))]
+
+		spot2 = set()
+		for spot in other.spots:
+			spot2 |= set(izip(*spot))
+		for spot in self.spots:
+			spot1 = set(izip(*spot))
 			spot3 = zip(*sorted(spot1 - spot2))
 			result.spots.append(spot3)
+
+		###
+		#for spot1, spot2 in izip(self.spots, other.spots):
+		#	spot1 = set(map(tuple, np.transpose(spot1).tolist()))
+		#	spot2 = set(map(tuple, np.transpose(spot2).tolist()))
+		#	spot3 = zip(*sorted(spot1 - spot2))
+		#	log(len(spot1), len(spot2), "=>", len(spot1 - spot2), "=", len(spot3[0]))
+		#	result.spots.append(spot3)
 		return result
 
 	def assign_pixels(self, level, force=False):
 		"""Detect list of coordinates of pixels above level."""
 		if force or not self.pixels:
 			coords = (self.cube > level).nonzero()
-			self.pixels = set(zip(*coords))
+			self.pixels = set(izip(*coords))
 		return self
 
 	def assign_sizes(self, force=False):
 		"""Return a dictionary of spot sizes."""
 		if not force and self.sizes:
 			return self
-		self.sizes = dict((n, len(spot)) for n, spot in enumerate(self.spots))
+		self.sizes = dict((n, len(spot[0])) for n, spot in enumerate(self.spots))
 		return self
 
 	def assign_few_colors(self,
@@ -137,16 +169,23 @@ class Spots(object):
 		self.colors = dict((spot, (v(r), v(g), v(b))) for spot in set(self.ids()))
 		return self
 
+	def assign_cube(self, cube):
+		"""Nice way of setting self.cube."""
+		self.cube = cube
+		return self
+
 	def draw_flat(self, image):
 		"""Draw spots on a flat image."""
-		return self.draw_3D([image] * self.cube.shape[-1])
+		self.draw_3D(Images(images=[image] * self.cube.shape[0]))
+		return image
 
 	def draw_3D(self, images):
 		"""Draw spots on a stack of images."""
 		self.assign_random_colors()
 		spots = self.as_dict()
 		for (x, y, z), spot in spots.iteritems():
-			images[z].putpixel((x,y), self.colors[spot])
+			images.images[z].putpixel((x,y), self.colors[spot])
+		return images
 
 	def ids(self):
 		"""Return a list of available spot ids"""
@@ -171,40 +210,52 @@ class Spots(object):
 	def normalized_cube(self, quantile=0.75, level=100):
 		"""Return cube"""
 		quantiles = self.quantiles(quantile)
-		result = np.zeros(self.cube.shape, dtype='uint8')
-		for spot in quantiles:
-			offset = level - quantiles[spot]
-			result[self.spots[spot]] = self.cube[self.spots] - offset
-		return result
+		result = np.zeros(self.cube.shape, dtype='int16')
+		for n, spot in enumerate(self.spots):
+			offset = level - quantiles[n]
+			res = np.add(self.cube[spot], offset)
+			res *= (self.cube[spot] >= quantiles[n]) * 0.5 + 0.5
+			result[spot] = res
+		return result.astype('uint8')
 
 	def occupancies(self, level):
 		"""Return a dictionary of number of pixels above level in each spot."""
-		return dict((n, len((self.cube[spot] > level).nonzero()))
+		return dict((n, len((self.cube[spot] > level).nonzero()[0]))
 			for n, spot in enumerate(self.spots))
+
+	def centers(self):
+		return [tuple(map(np.mean, spot)) #(spot[0].mean(), spot[1].mean(), spot[2].mean())
+			for spot in self.spots]
+
+	def sizes_and_occupancies(self, level):
+		return (
+			self.assign_sizes().sizes,
+			self.occupancies(level)
+		)
 
 	def as_dict(self):
 		"""Return spots as a dict of (x,y,z)->spot_num."""
 		spots = {}
 		for n, spot in enumerate(self.spots):
-			for z, y, x in spot.transpose().tolist():
+			for z, y, x in izip(*spot):
 				spots[x, y, z] = n
 		return spots
 
 class Images(object):
-	def __init__(self, filenames):
-		self.images = [Image.open(f).convert('RGB') for f in filenames]
+	def __init__(self, filenames=None, images=()):
+		if filenames:
+			images = [Image.open(f).convert('RGB') for f in filenames]
+		self.images = images
 		self.cubes = (None, None, None)
 
 	def flattened(self):
 		"""Return PIL image composed of all layers."""
 		return reduce(ImageChops.lighter, self.images)
 
-	def normalized_in(self, spots, quantile, levels):
-		"""Return new Images with `neighborhood` pixels around each spot normalized."""
-		self.assign_cubes()
-		for i in range(3):
-			quantiles = spots.quantiles(quantile, self.cubes[i])
-			# XXX
+	def save(self, pattern):
+		"""Save as series of images. In pattern {n} is for image number."""
+		for n, image in enumerate(self.images):
+			image.save(pattern.format(n=n))
 
 	def assign_cubes(self, force=False):
 		"""Convert images to three 3D numy arrays (by color component)."""
@@ -212,10 +263,26 @@ class Images(object):
 			return self
 		assert all(image.size == self.images[0].size for image in self.images)
 		im_split = [im.split() for im in self.images]
-		im_shape = (len(self.images),) + self.images[0].size
+		im_shape = (len(self.images),) + tuple(reversed(self.images[0].size))
 		self.cubes = [
 			np.fromstring("".join(im.tostring() for im in images), 'uint8').reshape(im_shape)
 			for images in zip(*im_split)
+		]
+		return self
+
+	def from_cubes(self, cubes=None):
+		if cubes:
+			self.cubes = cubes
+		assert all(cube.dtype == "uint8" for cube in self.cubes)
+		assert all(cube.shape == self.cubes[0].shape for cube in self.cubes)
+		im = {}
+		for c, cube in enumerate(self.cubes):
+			for z in range(cube.shape[0]):
+				shape = tuple(reversed(cube[z].shape))[:2]
+				im[c,z] = Image.fromstring("L", shape, cube[z].tostring())
+		self.images = [
+			Image.merge("RGB", (im[0,z], im[1,z], im[2,z]))
+			for z in range(cube.shape[0])
 		]
 		return self
 
@@ -225,6 +292,23 @@ def merge_red_green(image_red, image_green):
 	"""Return PIL image composed of	`image_red`'s R values for red, ditto for G."""
 	image_blue = Image.new('RGB', image_red.size)
 	return Image.merge('RGB', (image_red, image_green, image_blue))
+
+def print_sizes_and_occupancies(spots, sizes_and_occupancies):
+	"""Print table with spot sizes & occupancies."""
+	oses = sizes_and_occupancies
+	centers = spots.centers()
+
+	print "spot", "x", "y", "z",
+	for size in sorted(oses):
+		print "size" + str(size), "occupancy" + str(size),
+	print
+
+	for n in spots.ids():
+		print n,
+		print int(centers[n][2]), int(centers[n][1]), int(centers[n][0]),
+		for size in sorted(oses):
+			print oses[size][0][n], oses[size][1][n],
+		print
 
 ### Helpers
 

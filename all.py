@@ -2,7 +2,7 @@ import optparse
 import glob
 import sys
 from PIL import Image
-from analyze import Images, Spots, log
+from analyze import Images, Spots, log, print_sizes_and_occupancies
 
 p = optparse.OptionParser()
 p.add_option("-i", "--images")
@@ -26,54 +26,52 @@ spots = Spots(images.cubes[0])
 spots.detect_cc(options.red_spot_level)
 
 #log(sorted(spots.pixels, key=lambda(z,y,x):(z,x,y)))
-#log("Saving temporary image...")
+log("Saving temporary image...")
 #im = Image.new('RGB', images.images[0].size)
-#spots.draw_flat(im)
-#im.save('tmp.png')
+spots.draw_flat(images.flattened()).save('tmp.png')
 
-print spots.assign_sizes().sizes[0]
-print spots.spots[0]
-print spots.cube[spots.spots[0]]
+#print ">>>"
+#print spots.assign_sizes().sizes
+#print spots.assign_sizes().sizes[0]
+#print spots.spots[0]
+#print spots.cube[spots.spots[0]]
+#print "<<<"
 
 log("Filtering spots...")
 spots.filter_by_size(options.min_spot_size, options.max_spot_size)
 
-log("Normalizing spots...")
+log("Building spot neighborhoods...")
 green_boxes = spots.expanded((0, options.green_box_size, options.green_box_size))
-green_boxes.cube = images.cubes[1]
+green_boxes.assign_cube(images.cubes[1])
+
+log("Normalizing spot neighborhoods...")
 images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
 	options.nucleus_set_level)
 
-log("Counting occupancies & sizes...")
-def sizes_and_occupancies(spots):
-	return (spots.assign_sizes().sizes,
-		spots.occupancies(options.chromosome_level))
+log("Saving temporary image...")
+for spot in spots.spots:
+	images.cubes[0][spot] = 255
+images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
+images.from_cubes()
+#spots.assign_few_colors([(255,0,0)], force=True)
+#spots.draw_flat(images.flattened()).save('tmp2.png')
+#spots.draw_3D(images)
+images.flattened().save('tmp2.png')
+images.save("tmp-{n:02}.png")
 
+log("Counting occupancies & sizes...")
 oses = {}
-espots = Spots(spots)
-espots.cube = images.cubes[1]
-oses[0] = sizes_and_occupancies(espots)
+espots = Spots(spots).assign_cube(images.cubes[1])
+oses[0] = espots.sizes_and_occupancies(options.chromosome_level)
 for size in range(1, 3+1):
+	ospots = espots
 	espots = espots.expanded()
-	oses[size] = sizes_and_occupancies(espots - spots)
-espots = spots.expanded((0, 25, 25))
-oses[25] = sizes_and_occupancies(espots)
+	oses[size] = (espots - ospots).sizes_and_occupancies(options.chromosome_level)
+oses[25] = spots.expanded((0, 25, 25)).sizes_and_occupancies(options.chromosome_level)
 
 log("Writing...")
 if options.out_occupancies:
-	outfile = open(options.out_occupancies, 'w')
-else:
-	outfile = sys.stdout
-
-print >>outfile, "spot",
-for size in sorted(oses):
-	print >>outfile, "size" + str(size), "occupancy" + str(size),
-print >>outfile
-
-for n in spots.ids():
-	print >>outfile, n,
-	for size in sorted(oses):
-		print >>outfile, oses[n][0], oses[n][1],
-	print >>outfile
+	sys.stdout = open(options.out_occupancies, 'w')
+print_sizes_and_occupancies(spots, oses)
 
 log("... done!")
