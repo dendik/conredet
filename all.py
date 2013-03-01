@@ -18,8 +18,11 @@ options, args = p.parse_args()
 
 log("Loading images...")
 images = Images(glob.glob(options.images))
-log("Converting to numpy...")
 images.assign_cubes()
+
+log("Saving temporary image...")
+images.flattened().save('tmp-src.png')
+
 log("Detecting spots...")
 spots = Spots(images.cubes[0])
 #spots.assign_pixels(options.red_spot_leve).filter_tight_pixels()
@@ -33,6 +36,7 @@ green_boxes = spots.expanded((0, options.green_box_size, options.green_box_size)
 green_boxes.assign_cube(images.cubes[1])
 
 log("Normalizing spot neighborhoods...")
+#green_boxes.cube *= green_boxes.cube > 10
 images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
 	options.nucleus_set_level)
 
@@ -41,7 +45,7 @@ for spot in spots.spots:
 	images.cubes[0][spot] = 255
 images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
 images.from_cubes()
-images.flattened().save('tmp2.png')
+images.flattened().save('tmp-spots.png')
 images.save("tmp-{n:02}.png")
 
 log("Counting occupancies & sizes...")
