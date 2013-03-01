@@ -14,7 +14,7 @@ p.add_option("--green-box-size", type=int, default=25)
 p.add_option("--nucleus-quantile", type=float, default=0.5)
 p.add_option("--nucleus-set-level", type=int, default=100)
 p.add_option("--chromosome-level", type=int, default=150)
-p.add_option("--out-occupancies")
+p.add_option("-o", "--out-occupancies")
 for option in p.defaults:
 	p.defaults[option] = os.environ.get(option.upper(), p.defaults[option])
 options, args = p.parse_args()
