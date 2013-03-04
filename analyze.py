@@ -187,10 +187,9 @@ class Spots(object):
 		result = np.zeros(self.cube.shape, dtype='int16')
 		for n, spot in enumerate(self.spots):
 			offset = level - quantiles[n]
-			res = np.add(self.cube[spot], offset)
-			res *= (self.cube[spot] >= quantiles[n]) * 0.5 + 0.5
+			res = self.cube[spot].astype('int16') + offset
 			result[spot] = res
-		return result.astype('uint8')
+		return result.clip(0, 255).astype('uint8')
 
 	def occupancies(self, level):
 		"""Return a dictionary of number of pixels above level in each spot."""
