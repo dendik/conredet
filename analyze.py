@@ -194,7 +194,7 @@ class Spots(object):
 
 	def occupancies(self, level):
 		"""Return a dictionary of number of pixels above level in each spot."""
-		return dict((n, len((self.cube[spot] > level).nonzero()[0]))
+		return dict((n, np.count_nonzero(self.cube[spot] > level))
 			for n, spot in enumerate(self.spots))
 
 	def centers(self):
