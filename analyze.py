@@ -170,6 +170,7 @@ class Spots(object):
 		quantiles = {}
 		for spot in values:
 			value = values[spot]
+			value *= value > 0
 			quantiles[spot] = value[int(quantile * len(value))]
 		return quantiles
 
