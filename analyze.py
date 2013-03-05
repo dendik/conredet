@@ -187,6 +187,7 @@ class Spots(object):
 		for n, spot in enumerate(self.spots):
 			offset = level - quantiles[n]
 			res = self.cube[spot].astype('int16') + offset
+			res *= (res >= level) * 0.5 + 0.5 # half all values below level
 			result[spot] = res
 		return result.clip(0, 255).astype('uint8')
 
