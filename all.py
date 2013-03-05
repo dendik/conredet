@@ -49,8 +49,9 @@ if options.green_noise_level:
 images.flattened().save('tmp-src.png')
 
 log("Normalizing spot neighborhoods...")
-images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
-	options.nucleus_set_level)
+if options.nucleus_quantile:
+	images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
+		options.nucleus_set_level)
 
 log("Saving temporary image...")
 for spot in spots.spots:
