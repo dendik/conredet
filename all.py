@@ -25,6 +25,10 @@ log("Loading images...")
 images = Images(glob.glob(options.images))
 images.assign_cubes()
 
+if not options.green_noise_level:
+	log("Saving temporary image...")
+	images.flattened().save('tmp-src.png')
+
 log("Detecting spots...")
 spots = Spots(images.cubes[0])
 #spots.assign_pixels(options.red_spot_level).filter_tight_pixels()
@@ -49,10 +53,10 @@ if options.green_noise_level:
 	log("Removing noise...")
 	green_boxes.cube *= green_boxes.cube > options.green_noise_level
 
-log("Saving temporary image...")
-if options.green_noise_level:
+	log("Saving temporary image...")
+	images.cubes[2] *= 0
 	images.from_cubes()
-images.flattened().save('tmp-src.png')
+	images.flattened().save('tmp-src.png')
 
 log("Normalizing spot neighborhoods...")
 if options.nucleus_quantile:
