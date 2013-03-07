@@ -72,8 +72,20 @@ class Spots(object):
 		self.spots = [spot
 			for n, spot in enumerate(self.spots)
 			if min_size <= self.sizes[n] <= max_size]
-		self.sizes = [] # indices gone wrong
-		return self
+		return self.renumbered()
+
+	def filter_by_height(self, min_height=2, min_presence=5):
+		"""Remove spots not spanning given height."""
+		spots, self.spots = self.spots, []
+		for spot in spots:
+			zs = Counter(z for z, y, x in spot)
+			for z in zs:
+				if zs[z] < min_presence:
+					del zs[z]
+			if len(zs) < min_height:
+				continue
+			self.spots.append(spot)
+		return self.renumbered()
 
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
@@ -147,6 +159,12 @@ class Spots(object):
 		self.cube = cube
 		return self
 
+	def renumbered(self):
+		"""Remove all data that relies on spot numbering."""
+		self.colors = {}
+		self.sizes = {}
+		return self
+
 	def draw_flat(self, image):
 		"""Draw spots on a flat image."""
 		self.draw_3D(Images(images=[image] * self.cube.shape[0]))
@@ -170,7 +188,9 @@ class Spots(object):
 		quantiles = {}
 		for spot in values:
 			value = values[spot]
-			quantiles[spot] = value[int(quantile * len(value))]
+			q1 = value[int(quantile * len(value))]
+			q2 = value[int((1 - quantile) * len(value))]
+			quantiles[spot] = q1, q2
 		return quantiles
 
 	def values(self):
@@ -181,13 +201,25 @@ class Spots(object):
 		return values
 
 	def normalized_cube(self, quantile=0.75, level=100):
-		"""Return cube"""
+		"""Return cube, normalized in spots by shifting pixel values."""
 		quantiles = self.quantiles(quantile)
 		result = np.zeros(self.cube.shape, dtype='int16')
 		for n, spot in enumerate(self.spots):
-			offset = level - quantiles[n]
+			offset = level - quantiles[n][0]
 			res = self.cube[spot].astype('int16') + offset
 			res *= (res >= level) * 0.5 + 0.5 # half all values below level
+			res = (self.cube[spot].astype('int16') - low) * scale
+			result[spot] = res
+		return result.clip(0, 255).astype('uint8')
+
+	def stretched_cube(self, quantile=0.75):
+		"""Return cube, normalized in spots by stretching histogram."""
+		quantiles = self.quantiles(quantile)
+		result = np.zeros(self.cube.shape, dtype='int16')
+		for n, spot in enumerate(self.spots):
+			low, high = quantiles[n]
+			scale = int(256.0 / (256 - high + low))
+			res = (self.cube[spot].astype('int16') - low) * scale
 			result[spot] = res
 		return result.clip(0, 255).astype('uint8')
 
