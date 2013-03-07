@@ -12,7 +12,7 @@ Essential workflow:
 		* detect v-quantile level in neighbourhood
 		* scale colors
 	6. G: detect intensive pixels (chromosome area: m <= I <= M)
-	7. G: calculate number of pixels in (extended / poked) spot
+	7. G: calculate number of pixels in (expanded / poked) spot
 	8. Save (7) as xls
 
 Helpers:
@@ -78,7 +78,7 @@ class Spots(object):
 		"""Remove spots not spanning given height."""
 		spots, self.spots = self.spots, []
 		for spot in spots:
-			zs = Counter(z for z, y, x in spot)
+			zs = Counter(z for z, y, x in izip(*spot))
 			for z in zs:
 				if zs[z] < min_presence:
 					del zs[z]
@@ -147,11 +147,17 @@ class Spots(object):
 		return self
 
 	def assign_random_colors(self, r=None, g=None, b=None, force=False):
-		"""Aggign random color to each spot."""
+		"""Assign random color to each spot."""
 		if self.colors and not force:
 			return self
 		v = lambda x: (x is None) and random.randint(128, 255) or x
 		self.colors = dict((spot, (v(r), v(g), v(b))) for spot in set(self.ids()))
+		return self
+
+	def assign_color(self, color, force=False):
+		"""Assigne the same color to each spot."""
+		if not self.colors or force:
+			self.colors = dict((spot, color) for spot in self.ids())
 		return self
 
 	def assign_cube(self, cube):
@@ -177,6 +183,15 @@ class Spots(object):
 		for (x, y, z), spot in spots.iteritems():
 			images.images[z].putpixel((x,y), self.colors[spot])
 		return images
+
+	def draw_flat_border(self, image):
+		"""Draw perimeter of spots on a flat image."""
+		flat = Spots(self)
+		flat.spots = [([0]*len(Z), Y, X) for Z, Y, X in flat.spots]
+		border = flat.expanded()
+		border.spots = [([0]*len(Z), Y, X) for Z, Y, X in border.spots]
+		border = border - flat
+		return border.draw_flat(image)
 
 	def ids(self):
 		"""Return a list of available spot ids"""
