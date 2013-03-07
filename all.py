@@ -13,6 +13,7 @@ p.add_option("--max-spot-size", type=int, default=500)
 p.add_option("--green-box-size", type=int, default=25)
 p.add_option("--green-noise-level", type=int, default=0)
 p.add_option("--nucleus-quantile", type=float, default=0.5)
+p.add_option("--stretch-quantile", type=float)
 p.add_option("--nucleus-set-level", type=int, default=100)
 p.add_option("--chromosome-level", type=int, default=150)
 p.add_option("-o", "--out-occupancies")
@@ -24,13 +25,18 @@ log("Loading images...")
 images = Images(glob.glob(options.images))
 images.assign_cubes()
 
-#log("Saving temporary image...")
-#images.flattened().save('tmp-src.png')
-
 log("Detecting spots...")
 spots = Spots(images.cubes[0])
 #spots.assign_pixels(options.red_spot_level).filter_tight_pixels()
 spots.detect_cc(options.red_spot_level)
+
+log("Saving temporary image...")
+#spots.assign_few_colors([(0,0,255), (0,0,128), (0,255,0)], True)
+#spots.draw_flat(images.flattened()).save('tmp-red.png')
+for spot in spots.spots:
+	images.cubes[2][spot] = 255
+images.from_cubes()
+images.flattened().save('tmp-red.png')
 
 log("Filtering spots...")
 spots.filter_by_size(options.min_spot_size, options.max_spot_size)
@@ -52,6 +58,8 @@ log("Normalizing spot neighborhoods...")
 if options.nucleus_quantile:
 	images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
 		options.nucleus_set_level)
+if options.stretch_quantile:
+	images.cubes[1] = green_boxes.stretched_cube(options.stretch_quantile)
 
 log("Saving temporary image...")
 for spot in spots.spots:
