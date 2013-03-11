@@ -13,13 +13,17 @@ p.add_option("--max-spot-size", type=int, default=500)
 p.add_option("--green-box-size", type=int, default=25)
 p.add_option("--green-noise-level", type=int, default=0)
 p.add_option("--nucleus-quantile", type=float, default=0.5)
-p.add_option("--stretch-quantile", type=float)
+p.add_option("--stretch-quantiles")
 p.add_option("--nucleus-set-level", type=int, default=100)
 p.add_option("--chromosome-level", type=int, default=150)
 p.add_option("-o", "--out-occupancies")
 for option in p.defaults:
 	p.defaults[option] = os.environ.get(option.upper(), p.defaults[option])
 options, args = p.parse_args()
+
+if options.stretch_quantiles:
+	q1, q2 = map(float, options.stretch_quantiles.split(","))
+	options.stretch_quantiles = q1, q2
 
 log("Loading images...")
 images = Images(glob.glob(options.images))
@@ -59,11 +63,12 @@ if options.green_noise_level:
 	images.flattened().save('tmp-src.png')
 
 log("Normalizing spot neighborhoods...")
+if options.stretch_quantiles is not None:
+	images.cubes[1] = green_boxes.stretched_cube(*options.stretch_quantiles)
+	green_boxes.cube = images.cubes[1]
 if options.nucleus_quantile:
 	images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
 		options.nucleus_set_level)
-if options.stretch_quantile:
-	images.cubes[1] = green_boxes.stretched_cube(options.stretch_quantile)
 
 log("Saving temporary image...")
 for spot in spots.spots:
