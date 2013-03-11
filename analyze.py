@@ -203,9 +203,7 @@ class Spots(object):
 		quantiles = {}
 		for spot in values:
 			value = values[spot]
-			q1 = value[int(quantile * len(value))]
-			q2 = value[int((1 - quantile) * len(value))]
-			quantiles[spot] = q1, q2
+			quantiles[spot] = value[int(quantile * len(value))]
 		return quantiles
 
 	def values(self):
@@ -220,20 +218,21 @@ class Spots(object):
 		quantiles = self.quantiles(quantile)
 		result = np.zeros(self.cube.shape, dtype='int16')
 		for n, spot in enumerate(self.spots):
-			offset = level - quantiles[n][0]
+			offset = level - quantiles[n]
 			res = self.cube[spot].astype('int16') + offset
 			res *= (res >= level) * 0.5 + 0.5 # half all values below level
 			result[spot] = res
 		return result.clip(0, 255).astype('uint8')
 
-	def stretched_cube(self, quantile=0.75):
+	def stretched_cube(self, quantile1=0.2, quantile2=0.2):
 		"""Return cube, normalized in spots by stretching histogram."""
-		quantiles = self.quantiles(quantile)
-		result = np.zeros(self.cube.shape, dtype='int16')
+		quantiles1 = self.quantiles(quantile1)
+		quantiles2 = self.quantiles(1.0 - quantile2)
+		result = np.zeros(self.cube.shape)
 		for n, spot in enumerate(self.spots):
-			low, high = quantiles[n]
-			scale = int(256.0 / (256 - high + low))
-			res = (self.cube[spot].astype('int16') - low) * scale
+			low, high = quantiles1[n], quantiles2[n]
+			frag = self.cube[spot].astype('float64')
+			res = (frag - low) * 256.0 / (high - low)
 			result[spot] = res
 		return result.clip(0, 255).astype('uint8')
 
