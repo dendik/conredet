@@ -68,6 +68,14 @@ if options.stretch_quantile:
 log("Saving temporary image...")
 for spot in spots.spots:
 	images.cubes[0][spot] = 255
+chr_spots = Spots(images.cubes[1])
+chr_spots.detect_cc(options.chromosome_level)
+chr_spots.assign_color((128, 128, 128))
+chr_spots.draw_flat_border(images.flattened()).save('tmp-border.png')
+
+log("Saving temporary image...")
+for spot in spots.spots:
+	images.cubes[0][spot] = 255
 images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
 images.from_cubes()
 images.flattened().save('tmp-spots.png')
