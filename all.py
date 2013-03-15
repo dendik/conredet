@@ -38,6 +38,9 @@ spots = Spots(images.cubes[0])
 #spots.assign_pixels(options.red_spot_level).filter_tight_pixels()
 spots.detect_cc(options.red_spot_level)
 
+log("Filtering spots...")
+spots.filter_by_size(options.min_spot_size, options.max_spot_size)
+
 log("Saving temporary image...")
 #spots.assign_few_colors([(0,0,255), (0,0,128), (0,255,0)], True)
 #spots.draw_flat(images.flattened()).save('tmp-red.png')
@@ -45,9 +48,6 @@ for spot in spots.spots:
 	images.cubes[2][spot] = 255
 images.from_cubes()
 images.flattened().save('tmp-red.png')
-
-log("Filtering spots...")
-spots.filter_by_size(options.min_spot_size, options.max_spot_size)
 
 log("Building spot neighborhoods...")
 green_boxes = spots.expanded((0, options.green_box_size, options.green_box_size))
@@ -71,11 +71,13 @@ if options.nucleus_quantile:
 		options.nucleus_set_level)
 
 log("Saving temporary image...")
+images.cubes[2] *= 0
 for spot in spots.spots:
-	images.cubes[0][spot] = 255
+	images.cubes[2][spot] = 255
+images.from_cubes()
 chr_spots = Spots(images.cubes[1])
 chr_spots.detect_cc(options.chromosome_level)
-chr_spots.assign_color((128, 128, 128))
+chr_spots.assign_color((255, 160, 80))
 chr_spots.draw_flat_border(images.flattened()).save('tmp-border.png')
 
 log("Saving temporary image...")
