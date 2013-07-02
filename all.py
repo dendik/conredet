@@ -41,6 +41,7 @@ images.cubes[1] = green_boxes.normalized_cube(options.nucleus_quantile,
 	options.nucleus_set_level)
 
 log("Saving temporary image...")
+images.flattened().save('tmp-norm.png')
 for spot in spots.spots:
 	images.cubes[0][spot] = 255
 images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
