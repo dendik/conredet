@@ -12,7 +12,7 @@ Essential workflow:
 		* detect v-quantile level in neighbourhood
 		* scale colors
 	6. G: detect intensive pixels (chromosome area: m <= I <= M)
-	7. G: calculate number of pixels in (extended / poked) spot
+	7. G: calculate number of pixels in (expanded / poked) spot
 	8. Save (7) as xls
 
 Helpers:
@@ -72,8 +72,20 @@ class Spots(object):
 		self.spots = [spot
 			for n, spot in enumerate(self.spots)
 			if min_size <= self.sizes[n] <= max_size]
-		self.sizes = [] # indices gone wrong
-		return self
+		return self.renumbered()
+
+	def filter_by_height(self, min_height=2, min_presence=5):
+		"""Remove spots not spanning given height."""
+		spots, self.spots = self.spots, []
+		for spot in spots:
+			zs = Counter(z for z, y, x in izip(*spot))
+			for z in zs:
+				if zs[z] < min_presence:
+					del zs[z]
+			if len(zs) < min_height:
+				continue
+			self.spots.append(spot)
+		return self.renumbered()
 
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
@@ -135,16 +147,28 @@ class Spots(object):
 		return self
 
 	def assign_random_colors(self, r=None, g=None, b=None, force=False):
-		"""Aggign random color to each spot."""
+		"""Assign random color to each spot."""
 		if self.colors and not force:
 			return self
 		v = lambda x: (x is None) and random.randint(128, 255) or x
 		self.colors = dict((spot, (v(r), v(g), v(b))) for spot in set(self.ids()))
 		return self
 
+	def assign_color(self, color, force=False):
+		"""Assigne the same color to each spot."""
+		if not self.colors or force:
+			self.colors = dict((spot, color) for spot in self.ids())
+		return self
+
 	def assign_cube(self, cube):
 		"""Nice way of setting self.cube."""
 		self.cube = cube
+		return self
+
+	def renumbered(self):
+		"""Remove all data that relies on spot numbering."""
+		self.colors = {}
+		self.sizes = {}
 		return self
 
 	def draw_flat(self, image):
@@ -159,6 +183,15 @@ class Spots(object):
 		for (x, y, z), spot in spots.iteritems():
 			images.images[z].putpixel((x,y), self.colors[spot])
 		return images
+
+	def draw_flat_border(self, image):
+		"""Draw perimeter of spots on a flat image."""
+		flat = Spots(self)
+		flat.spots = [([0]*len(Z), Y, X) for Z, Y, X in flat.spots]
+		border = flat.expanded()
+		border.spots = [([0]*len(Z), Y, X) for Z, Y, X in border.spots]
+		border = border - flat
+		return border.draw_flat(image)
 
 	def ids(self):
 		"""Return a list of available spot ids"""
@@ -181,19 +214,31 @@ class Spots(object):
 		return values
 
 	def normalized_cube(self, quantile=0.75, level=100):
-		"""Return cube"""
+		"""Return cube, normalized in spots by shifting pixel values."""
 		quantiles = self.quantiles(quantile)
 		result = np.zeros(self.cube.shape, dtype='int16')
 		for n, spot in enumerate(self.spots):
 			offset = level - quantiles[n]
-			res = np.add(self.cube[spot], offset)
-			res *= (self.cube[spot] >= quantiles[n]) * 0.5 + 0.5
+			res = self.cube[spot].astype('int16') + offset
+			res *= (res >= level) * 0.5 + 0.5 # half all values below level
 			result[spot] = res
-		return result.astype('uint8')
+		return result.clip(0, 255).astype('uint8')
+
+	def stretched_cube(self, quantile1=0.2, quantile2=0.2):
+		"""Return cube, normalized in spots by stretching histogram."""
+		quantiles1 = self.quantiles(quantile1)
+		quantiles2 = self.quantiles(1.0 - quantile2)
+		result = np.zeros(self.cube.shape)
+		for n, spot in enumerate(self.spots):
+			low, high = quantiles1[n], quantiles2[n]
+			frag = self.cube[spot].astype('float64')
+			res = (frag - low) * 256.0 / (high - low)
+			result[spot] = res
+		return result.clip(0, 255).astype('uint8')
 
 	def occupancies(self, level):
 		"""Return a dictionary of number of pixels above level in each spot."""
-		return dict((n, len((self.cube[spot] > level).nonzero()[0]))
+		return dict((n, np.count_nonzero(self.cube[spot] > level))
 			for n, spot in enumerate(self.spots))
 
 	def centers(self):
