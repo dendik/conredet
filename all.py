@@ -95,7 +95,7 @@ espots = Spots(spots).assign_cube(images.cubes[1])
 oses[0] = espots.sizes_and_occupancies(options.chromosome_level)
 for size in range(1, 3+1):
 	ospots = espots
-	espots = espots.expanded()
+	espots = espots.expanded((0, 1, 1))
 	oses[size] = (espots - ospots).sizes_and_occupancies(options.chromosome_level)
 oses[25] = spots.expanded((0, 25, 25)).sizes_and_occupancies(options.chromosome_level)
 
