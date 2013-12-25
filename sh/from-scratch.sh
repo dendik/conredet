@@ -7,5 +7,5 @@ export img=img$run_name
 
 ./merge-all.sh
 ./remove-bad.sh
-./chr-control-v2.sh
+./chr-control.sh
 ./copy-images.sh
