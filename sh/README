@@ -11,7 +11,7 @@ It invokes:
 	* remove-bad.sh
 		- remove hard-coded list of known bad images
 
-	* chr-control-v2.sh
+	* chr-control.sh
 		- run all.py with given per-series parameter presets
 		- save resultinv csv files in a flat directory
 
@@ -20,9 +20,6 @@ It invokes:
 		- produce directory flat with flattened source images
 
 Also in directory:
-
-	* chr-control.sh
-		- older version of chr-control-v2.sh
 
 	* count.sh
 		- produce counts of escaped signals
