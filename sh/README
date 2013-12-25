@@ -1,0 +1,34 @@
+The main script is from-scratch.sh
+
+It invokes:
+
+	* merge-all.sh
+		- traverse a tree with images
+		- find matching pairs of red + green images
+		- produce flat directory with merged red + green images & consistent names
+		- produce similar directory with the same images blurred
+	
+	* remove-bad.sh
+		- remove hard-coded list of known bad images
+
+	* chr-control-v2.sh
+		- run all.py with given per-series parameter presets
+		- save resultinv csv files in a flat directory
+
+	* copy-images.sh
+		- produce directory red with merged results of red detection per series
+		- produce directory flat with flattened source images
+
+Also in directory:
+
+	* chr-control.sh
+		- older version of chr-control-v2.sh
+
+	* count.sh
+		- produce counts of escaped signals
+
+	* draw-discarded.sh
+		- using flat images as input, visualise which territories were discarded
+
+	* tables.sh
+		- collect all ouput tables in one file
