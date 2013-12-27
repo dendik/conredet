@@ -6,7 +6,8 @@ from PIL import Image
 from analyze import Images, Spots, log, print_sizes_and_occupancies
 
 p = optparse.OptionParser()
-p.add_option("-i", "--images")
+p.add_option("-i", "--images", help="glob expression for image names")
+p.add_option("-z", "--czi-images", help="czi-file with images")
 p.add_option("--red-spot-level", type=int, default=120)
 p.add_option("--min-spot-size", type=int, default=15)
 p.add_option("--max-spot-size", type=int, default=500)
@@ -26,8 +27,16 @@ if options.stretch_quantiles:
 	options.stretch_quantiles = q1, q2
 
 log("Loading images...")
-images = Images(glob.glob(options.images))
-images.assign_cubes()
+if options.images:
+	images = Images(glob.glob(options.images))
+	images.assign_cubes()
+elif options.czi_images:
+	import czifile
+	images = Images()
+	with czifile.CziFile(options.czi_images) as czi:
+		universe = czi.asarray()
+		r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
+		images.from_cubes([b, r, g])
 
 if not options.green_noise_level:
 	log("Saving temporary image...")
