@@ -306,11 +306,6 @@ class Images(object):
 
 ### Functions
 
-def merge_red_green(image_red, image_green):
-	"""Return PIL image composed of	`image_red`'s R values for red, ditto for G."""
-	image_blue = Image.new('RGB', image_red.size)
-	return Image.merge('RGB', (image_red, image_green, image_blue))
-
 def print_sizes_and_occupancies(spots, sizes_and_occupancies):
 	"""Print table with spot sizes & occupancies."""
 	oses = sizes_and_occupancies
