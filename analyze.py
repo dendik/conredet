@@ -32,6 +32,7 @@ import random
 from itertools import count, izip
 from PIL import Image, ImageChops
 import numpy as np
+from utils import log
 
 class Spots(object):
 
@@ -364,6 +365,3 @@ def xyzrange((x0, y0, z0), d=1):
 		for y in xrange(y0 - dy, y0 + dy + 1):
 			for z in xrange(z0 - dz, z0 + dz + 1):
 				yield x, y, z
-
-def log(*args):
-	sys.stderr.write(" ".join(map(str, args)) + "\n")

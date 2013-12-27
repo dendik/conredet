@@ -3,7 +3,8 @@ import os
 import glob
 import sys
 from PIL import Image
-from analyze import Images, Spots, log, print_sizes_and_occupancies
+from analyze import Images, Spots, print_sizes_and_occupancies
+from utils import log
 
 p = optparse.OptionParser()
 p.add_option("-i", "--images", help="glob expression for image names")
