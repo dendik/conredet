@@ -27,9 +27,8 @@ Naming:
 	* cube -- representation of series of 1-color images as a 3D numpy array
 
 """
-import sys
 import random
-from itertools import count, izip
+from itertools import izip
 from PIL import Image, ImageChops
 import numpy as np
 from utils import log
