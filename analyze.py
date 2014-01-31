@@ -307,6 +307,9 @@ class Images(object):
 		]
 		return self
 
+	def clone(self):
+		return Images().from_cubes([cube.copy() for cube in self.cubes])
+
 ### Functions
 
 def print_sizes_and_occupancies(spots, sizes_and_occupancies):
