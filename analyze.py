@@ -16,7 +16,6 @@ Essential workflow:
 	8. Save (7) as xls
 
 Helpers:
-	0. Merge R & G images into RG-image (or split RG-image into R & G images?)
 	1. Save source images with detected spots
 	2. Save flat image with flattened (max) source images & flattened spots
 	3. Save normalized images [with detected spots & chromosome areas]
@@ -32,6 +31,8 @@ from itertools import izip
 from PIL import Image, ImageChops
 import numpy as np
 from utils import log
+
+infinity = 10**6 # very big number, big enough to be bigger than any spot
 
 class Spots(object):
 
@@ -66,8 +67,10 @@ class Spots(object):
 				if other in self.pixels])]
 		return self
 
-	def filter_by_size(self, min_size, max_size):
+	def filter_by_size(self, min_size=None, max_size=None):
 		"""Remove spots not fitting in the given size range."""
+		min_size = min_size or 0
+		max_size = max_size or infinity
 		self.assign_sizes()
 		self.spots = [spot
 			for n, spot in enumerate(self.spots)
