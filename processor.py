@@ -7,6 +7,7 @@ from analyze import Images, Spots
 from utils import log, logging
 
 options = None
+colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 
 def main():
 	global options
@@ -24,6 +25,7 @@ def main():
 	territories = spotss['territory'] = detect_signals(images, options.territory)
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
+	draw_flat_colors(images, "img-cterritories.png", territories, colors)
 	draw_3D_border(images, "img-{n:02}.png", territories)
 	print_stats(spotss, images)
 
@@ -88,7 +90,7 @@ def print_stats(spotss, images):
 		name1, name2, size = key
 		spots = spotss[name1]
 		centers = map(lambda xyz: map(int, xyz), spots.centers())
-		zs, ys, xs = zip(**centers)
+		zs, ys, xs = zip(*centers)
 		sizes, occupancies = stats[key]
 		print ""
 		print name1, name2, size
@@ -139,6 +141,14 @@ def draw_flat_spots(images, filename, spots, options, blackout=True):
 	images.flattened().save(filename.format(**vars(options)))
 
 @logging
+def draw_flat_colors(images, filename, spots, colors):
+	spots = Spots(spots)
+	espots = Spots(spots).expanded((0,3,3)).assign_few_colors(colors, True)
+	spots.colors = espots.colors
+	images = images.clone()
+	spots.draw_flat(images.flattened()).save(filename)
+
+@logging
 def draw_flat_border(images, filename, spots):
 	spots.assign_color(options.border_color)
 	spots.draw_flat_border(images.flattened()).save(filename)
@@ -175,7 +185,7 @@ def parse_options():
 		help="Level of detected signal in neighborhood (used by next option)")
 	p.add_option("--neighborhood-shift-quantile", type=float,
 		help="Shift values to make this quantile equal neighborhood-set-level")
-	p.add_option("--spot-sizes", default=(0, 10, 15, 20, 25),
+	p.add_option("--spot-sizes", default=(0, 1, 3),
 		help="Comma-separated list of spot extension sizes to report occupancy on")
 	p.add_option("--border-color", default=(255, 160, 80),
 		help="Color for border, given as r,g,b values in range 0 to 255")
