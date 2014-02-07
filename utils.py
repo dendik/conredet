@@ -1,4 +1,5 @@
 import sys
+import time
 import functools
 
 def log(*args):
@@ -8,7 +9,7 @@ def logging(message):
 	def decorator(f):
 		@functools.wraps(f)
 		def result(*args, **kws):
-			log(message)
+			log(time.strftime("%T"), message)
 			return f(*args, **kws)
 		return result
 
