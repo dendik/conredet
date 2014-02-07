@@ -135,18 +135,15 @@ class Spots(object):
 		"""Assign as few as possible colors to spots ."""
 		if self.colors and not force:
 			return self
-		self.colors = dict((spot, possible_colors[0])
-			for spot in set(self.ids()))
-		spots = self.as_dict()
-		for next_color in possible_colors[1:]:
-			for pixel in spots:
-				for other in xyzrange(pixel, 3):
-					if other != pixel and other in self.spots:
-						s1 = spots[pixel]
-						s2 = spots[other]
-						if s1 != s2 and self.colors[s1] == self.colors[s2]:
-							self.colors[s1] = next_color
-							break
+		_, W, H = self.cube.shape
+		has_color = np.zeros((len(possible_colors), W, H), bool)
+		self.colors = {}
+		for n, (Z, Y, X) in enumerate(self.spots):
+			for color in range(len(possible_colors)):
+				if np.count_nonzero(has_color[color, Y, X]) == 0:
+					break
+			has_color[color, Y, X] = 1
+			self.colors[n] = possible_colors[color]
 		return self
 
 	def assign_random_colors(self, r=None, g=None, b=None, force=False):
