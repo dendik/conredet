@@ -14,18 +14,18 @@ def main():
 	images = load_images()
 
 	draw_flat_images(images, "img-src.png")
-	spots = {}
+	spotss = {}
 	for color_options in options.signal:
-		this = spots[color_options.color] = detect_signals(images, color_options)
-		draw_flat_spots(images, "img-{color}.png", this, color_options)
-		draw_flat_border(images, "img-b{color}.png", this)
+		this = spotss[color_options.color] = detect_signals(images, color_options)
+		draw_flat_spots(images, "img-c{color}.png", this, color_options)
+		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
 		neighborhoods = build_neighborhoods(this, images)
 		normalize_neighborhoods(neighborhoods, images)
 	territories = detect_signals(images, options.territory)
 	draw_flat_images(images, "img-normalized.png")
-	draw_flat_border(images, "img-territories.png", territories)
+	draw_flat_border(images, "img-bterritories.png", territories)
 	draw_3D_border(images, "img-{n:02}.png", territories)
-	print_stats(spots, images)
+	print_stats(spotss, images)
 
 # --------------------------------------------------
 # Input & preprocessing
@@ -78,8 +78,8 @@ def normalize_neighborhoods(neighborhoods, images):
 #
 
 @logging
-def print_stats(spots, images):
-	stats = count_all_overlaps(spots, images)
+def print_stats(spotss, images):
+	stats = count_all_overlaps(spotss, images)
 	stats = dict(
 		("{}:{}:{}".format(name1, name2, size), value)
 		for (name1, name2, size), value in stats.items()
@@ -88,18 +88,18 @@ def print_stats(spots, images):
 	if options.out_stats:
 		sys.stdout = open(options.out_stats, 'w')
 
-	for color in spots:
-		print_sizes_and_occupancies(spots[color], stats)
+	for color in spotss:
+		print_sizes_and_occupancies(spotss[color], stats)
 
 @logging
-def count_all_overlaps(spots, images):
+def count_all_overlaps(spotss, images):
 	stats = {}
-	for color in spots:
-		espots = Spots(spots[color])
+	for color in spotss:
+		espots = Spots(spotss[color])
 		for size in options.spot_sizes:
 			eespots = espots.expanded((0, size, size))
 			count_channel_overlaps(stats, images, espots, color, "territory", size)
-			for other in spots:
+			for other in spotss:
 				if other != color:
 					count_channel_overlaps(stats, images, espots, color, other, size)
 	return stats
