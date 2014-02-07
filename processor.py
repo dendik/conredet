@@ -3,7 +3,7 @@ import os
 import glob
 import sys
 from PIL import Image
-from analyze import Images, Spots, print_sizes_and_occupancies
+from analyze import Images, Spots
 from utils import log, logging
 
 options = None
@@ -21,7 +21,7 @@ def main():
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
 		neighborhoods = build_neighborhoods(this, images)
 		normalize_neighborhoods(neighborhoods, images)
-	territories = detect_signals(images, options.territory)
+	territories = spotss['territory'] = detect_signals(images, options.territory)
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
 	draw_3D_border(images, "img-{n:02}.png", territories)
@@ -80,37 +80,40 @@ def normalize_neighborhoods(neighborhoods, images):
 @logging
 def print_stats(spotss, images):
 	stats = count_all_overlaps(spotss, images)
-	stats = dict(
-		("{}:{}:{}".format(name1, name2, size), value)
-		for (name1, name2, size), value in stats.items()
-	)
 
 	if options.out_stats:
 		sys.stdout = open(options.out_stats, 'w')
 
-	for color in spotss:
-		print_sizes_and_occupancies(spotss[color], stats)
+	for key in sorted(stats):
+		name1, name2, size = key
+		spots = spotss[name1]
+		centers = map(lambda xyz: map(int, xyz), spots.centers())
+		zs, ys, xs = zip(**centers)
+		sizes, occupancies = stats[key]
+		print ""
+		print name1, name2, size
+		print "spot", "x", "y", "z", "size", "occupancy"
+		for n in spotss[name1].ids():
+			print n, xs[n], ys[n], zs[n], sizes[n], occupancies[n]
 
-@logging
 def count_all_overlaps(spotss, images):
 	stats = {}
 	for color in spotss:
 		espots = Spots(spotss[color])
 		for size in options.spot_sizes:
 			eespots = espots.expanded((0, size, size))
-			count_channel_overlaps(stats, images, espots, color, "territory", size)
 			for other in spotss:
 				if other != color:
-					count_channel_overlaps(stats, images, espots, color, other, size)
+					count_channel_overlaps(stats, images, eespots, color, other, size)
 	return stats
 
-	# This part is not yet reproduced:
-
+	###TODO: This part is not yet reproduced:
 	#for size in range(1, 3+1):
 	#	ospots = espots
 	#	espots = espots.expanded((0, 1, 1))
 	#	oses[size] = (espots - ospots).sizes_and_occupancies(options.chromosome_level)
 
+@logging
 def count_channel_overlaps(stats, images, spots, name1, name2, size):
 	color_options = vars(options)[name2]
 	spots.assign_cube(images.cubes[color_options.channel])
