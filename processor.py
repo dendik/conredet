@@ -2,6 +2,7 @@ import optparse
 import os
 import glob
 import sys
+import numpy as np
 from PIL import Image
 from analyze import Images, Spots
 from utils import log, logging
@@ -16,12 +17,14 @@ def main():
 
 	draw_flat_images(images, "img-src.png")
 	spotss = {}
+	normalized = Normalized(images)
 	for color_options in options.signal:
 		this = spotss[color_options.color] = detect_signals(images, color_options)
 		draw_flat_spots(images, "img-c{color}.png", this, color_options)
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
 		neighborhoods = build_neighborhoods(this, images)
-		normalize_neighborhoods(neighborhoods, images)
+		normalized.add(normalize_neighborhoods(neighborhoods, images))
+	images = normalized.get()
 	territories = spotss['territory'] = detect_signals(images, options.territory)
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
@@ -69,11 +72,24 @@ def normalize_neighborhoods(neighborhoods, images):
 	shift_quantile = options.neighborhood_shift_quantile
 	level = options.neighborhood_set_level
 
+	save = neighborhoods.cube = images.cubes[channel]
 	if stretch_quantiles is not None:
-		images.cubes[channel] = neighborhoods.stretched_cube(*stretch_quantiles)
-		neighborhoods.cube = images.cubes[channel]
+		cube = neighborhoods.cube = neighborhoods.stretched_cube(*stretch_quantiles)
 	if shift_quantile:
-		images.cubes[channel] = neighborhoods.normalized_cube(shift_quantile, level)
+		cube = neighborhoods.normalized_cube(shift_quantile, level)
+	images.cubes[channel] = neighborhoods.cube = save
+	return cube
+
+class Normalized(object):
+	def __init__(self, images):
+		self.images = images
+		self.channel = options.territory.channel
+		self.cube = np.zeros(images.cubes[self.channel].shape, 'uint8')
+	def add(self, cube):
+		self.cube = np.maximum(self.cube, cube)
+	def get(self):
+		self.images.cubes[self.channel] = self.cube
+		return self.images
 
 # --------------------------------------------------
 # Output
