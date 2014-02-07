@@ -3,8 +3,25 @@ import os
 import glob
 import sys
 from PIL import Image
-from analyze import Images, Spots, print_sizes_and_occupancies
+from analyze import Images, Spots
 from utils import log
+
+def print_sizes_and_occupancies(spots, sizes_and_occupancies):
+	"""Print table with spot sizes & occupancies."""
+	oses = sizes_and_occupancies
+	centers = spots.centers()
+
+	print "spot", "x", "y", "z",
+	for size in sorted(oses):
+		print "size" + str(size), "occupancy" + str(size),
+	print
+
+	for n in spots.ids():
+		print n,
+		print int(centers[n][2]), int(centers[n][1]), int(centers[n][0]),
+		for size in sorted(oses):
+			print oses[size][0][n], oses[size][1][n],
+		print
 
 p = optparse.OptionParser()
 p.add_option("-i", "--images", help="glob expression for image names")
@@ -12,6 +29,8 @@ p.add_option("-z", "--czi-images", help="czi-file with images")
 p.add_option("--red-spot-level", type=int, default=120)
 p.add_option("--min-spot-size", type=int, default=15)
 p.add_option("--max-spot-size", type=int, default=500)
+p.add_option("--min-territory-size", type=int, default=100)
+p.add_option("--max-territory-size", type=int, default=1000)
 p.add_option("--green-box-size", type=int, default=25)
 p.add_option("--green-noise-level", type=int, default=0)
 p.add_option("--nucleus-quantile", type=float, default=0.5)
@@ -87,6 +106,7 @@ for spot in spots.spots:
 images.from_cubes()
 chr_spots = Spots(images.cubes[1])
 chr_spots.detect_cc(options.chromosome_level)
+chr_spots.filter_by_size(options.min_territory_size, options.max_territory_size)
 chr_spots.assign_color((255, 160, 80))
 chr_spots.draw_flat_border(images.flattened()).save('tmp-border.png')
 
@@ -94,8 +114,9 @@ log("Saving temporary image...")
 images.flattened().save('tmp-norm.png')
 for spot in spots.spots:
 	images.cubes[0][spot] = 255
-images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
+#images.cubes[2] = ((images.cubes[1] > options.chromosome_level) * 255).astype('uint8')
 images.from_cubes()
+(chr_spots.expanded((0, 1, 1)) - chr_spots).draw_3D(images)
 images.flattened().save('tmp-spots.png')
 images.save("tmp-{n:02}.png")
 

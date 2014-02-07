@@ -310,25 +310,6 @@ class Images(object):
 	def clone(self):
 		return Images().from_cubes([cube.copy() for cube in self.cubes])
 
-### Functions
-
-def print_sizes_and_occupancies(spots, sizes_and_occupancies):
-	"""Print table with spot sizes & occupancies."""
-	oses = sizes_and_occupancies
-	centers = spots.centers()
-
-	print "spot", "x", "y", "z",
-	for size in sorted(oses):
-		print "size" + str(size), "occupancy" + str(size),
-	print
-
-	for n in spots.ids():
-		print n,
-		print int(centers[n][2]), int(centers[n][1]), int(centers[n][0]),
-		for size in sorted(oses):
-			print oses[size][0][n], oses[size][1][n],
-		print
-
 ### Helpers
 
 def find_components(edges):
