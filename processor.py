@@ -29,7 +29,8 @@ def main():
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
 	draw_flat_colors(images, "img-cterritories.png", territories, colors)
-	draw_3D_border(images, "img-{n:02}.png", territories)
+	images.save("img-{n:02}.png")
+	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
 
 # --------------------------------------------------
@@ -89,6 +90,7 @@ class Normalized(object):
 		self.cube = np.maximum(self.cube, cube)
 	def get(self):
 		self.images.cubes[self.channel] = self.cube
+		self.images.from_cubes()
 		return self.images
 
 # --------------------------------------------------
@@ -174,6 +176,16 @@ def draw_3D_border(images, filename, spots):
 	images = images.clone()
 	spots = spots.expanded((0, 1, 1)) - spots
 	spots.draw_3D(images)
+	images.save(filename)
+
+@logging
+def draw_3D_colors(images, filename, spotss):
+	images = images.clone()
+	for name in spotss:
+		color_options = vars(options)[name]
+		for spot in spotss[name].spots:
+			images.cubes[color_options.channel][spot] = 255
+	images.from_cubes()
 	images.save(filename)
 
 # --------------------------------------------------
