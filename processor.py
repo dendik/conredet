@@ -44,12 +44,24 @@ def load_images():
 		images.assign_cubes()
 	elif options.czi_images:
 		import czifile
-		images = Images()
 		with czifile.CziFile(options.czi_images) as czi:
-			universe = czi.asarray()
-			r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
-			images.from_cubes([r, g, b])
+			images = load_czi_images(czi)
+			print_czi_metadata(czi)
 	return images
+
+def load_czi_images(czi):
+	images = Images()
+	universe = czi.asarray()
+	r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
+	images.from_cubes([r, g, b])
+	return images
+
+def print_czi_metadata(czi):
+	colors = 'Red', '(ignore)', 'Green', 'Blue'
+	channels = czi.metadata.findall(".//ExcitationWavelength")
+	for n, (channel, color) in enumerate(zip(channels, colors)):
+		wavelength = str(int(float(channel.text))) + "nm"
+		print n, channel.getparent().get('Name'), wavelength, "=>", color
 
 @logging
 def detect_signals(images, options):
