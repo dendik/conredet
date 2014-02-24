@@ -3,6 +3,7 @@ import os
 import glob
 import sys
 import numpy as np
+from scipy.ndimage import gaussian_filter
 from PIL import Image
 from analyze import Images, Spots
 from utils import log, logging
@@ -13,6 +14,9 @@ colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 def main():
 	global options
 	options, args = parse_options()
+	log(options.red)
+	log(options.green)
+	log(options.blue)
 	images = load_images()
 
 	draw_flat_images(images, "img-src.png")
@@ -61,11 +65,18 @@ def print_czi_metadata(czi):
 	channels = czi.metadata.findall(".//ExcitationWavelength")
 	for n, (channel, color) in enumerate(zip(channels, colors)):
 		wavelength = str(int(float(channel.text))) + "nm"
-		print n, channel.getparent().get('Name'), wavelength, "=>", color
+		log(n, channel.getparent().get('Name'), wavelength, "=>", color)
+	for coord in "XYZ":
+		scaling, = czi.metadata.findall(".//Scaling" + coord)
+		log(coord, "scaling:", int(float(scaling.text) * 10**9), "nm")
 
 @logging
 def detect_signals(images, options):
 	spots = Spots(images.cubes[options.channel])
+	if options.blur:
+		cube = images.cubes[options.channel].astype('float')
+		cube = gaussian_filter(cube, options.blur)
+		spots = Spots(cube.astype('uint8'))
 	#spots.assign_pixels(options.level).filter_tight_pixels()
 	spots.detect_cc(options.level)
 	spots.filter_by_size(options.min_size, options.max_size)
@@ -217,6 +228,8 @@ def parse_options():
 			type=int, help="Minimal size of spot")
 		p.add_option(color + "-max-size", default=500,
 			type=int, help="Maximal size of spot")
+		p.add_option(color + "-blur", type=float,
+			help="If non-zero, apply gausian blur; use parameter value as sigma")
 	p.add_option("--neighborhood-size", default=25, type=int,
 		help="Size (approx. half the side of square) of spot neighborhood")
 	p.add_option("--neighborhood-stretch-quantiles",
