@@ -212,7 +212,6 @@ class Spots(object):
 
 	def draw_3D(self, images):
 		"""Draw spots on a stack of images."""
-		print self.has_colors, sorted(set(spot.color for spot in self.spots))
 		self.assign_random_colors()
 		for spot in self.spots:
 			spot.draw_3D(images)
