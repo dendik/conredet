@@ -122,46 +122,25 @@ class Normalized(object):
 
 @logging
 def print_stats(spotss, images):
-	stats = count_all_overlaps(spotss, images)
-
 	if options.out_stats:
 		sys.stdout = open(options.out_stats, 'w')
 
-	for key in sorted(stats):
-		name1, name2, size = key
-		spots = spotss[name1]
-		centers = map(lambda xyz: map(int, xyz), spots.centers())
-		zs, ys, xs = zip(*centers)
-		sizes, occupancies = stats[key]
+	for color1, color2, size, spots, level in iter_views(spotss, images):
 		print ""
-		print name1, name2, size
+		print color1, color2, size
 		print "spot", "x", "y", "z", "size", "occupancy"
-		for n in spotss[name1].ids():
-			print n, xs[n], ys[n], zs[n], sizes[n], occupancies[n]
+		for n, spot in enumerate(spots.spots):
+			print n, spot.center(), spot.size(), spot.occupancy(level)
 
-def count_all_overlaps(spotss, images):
-	stats = {}
+def iter_views(spotss, images):
 	for color in spotss:
-		espots = Spots(spotss[color])
 		for size in options.spot_sizes:
-			eespots = espots.expanded((0, size, size))
-			for other in spotss:
-				if other != color:
-					count_channel_overlaps(stats, images, eespots, color, other, size)
-	return stats
-
-	###TODO: This part is not yet reproduced:
-	#for size in range(1, 3+1):
-	#	ospots = espots
-	#	espots = espots.expanded((0, 1, 1))
-	#	oses[size] = (espots - ospots).sizes_and_occupancies(options.chromosome_level)
-
-@logging
-def count_channel_overlaps(stats, images, spots, name1, name2, size):
-	color_options = vars(options)[name2]
-	spots.assign_cube(images.cubes[color_options.channel])
-	sizes_and_occupancies = spots.sizes_and_occupancies(color_options.level)
-	stats[name1, name2, size] = sizes_and_occupancies
+			espots = Spots(spotss[color]).expanded((0, size, size))
+			for other_color in spotss:
+				if other_color != color:
+					color_options = vars(options)[other_color]
+					espots.assign_cube(images.cubes[color_options.channel])
+					yield color, other_color, size, espots, color_options.level
 
 # --------------------------------------------------
 # Images output
@@ -177,7 +156,7 @@ def draw_flat_spots(images, filename, spots, options, blackout=True):
 	if blackout:
 		images.cubes[options.channel] *= 0
 	for spot in spots.spots:
-		images.cubes[options.channel][spot] = 255
+		images.cubes[options.channel][spot.coords] = 255
 	images.from_cubes()
 	images.flattened().save(filename.format(**vars(options)))
 
@@ -185,13 +164,13 @@ def draw_flat_spots(images, filename, spots, options, blackout=True):
 def draw_flat_colors(images, filename, spots, colors):
 	spots = Spots(spots)
 	espots = Spots(spots).expanded((0,3,3)).assign_few_colors(colors, True)
-	spots.colors = espots.colors
+	spots.assign_colors_from(espots)
 	images = images.clone()
 	spots.draw_flat(images.flattened()).save(filename)
 
 @logging
 def draw_flat_border(images, filename, spots):
-	spots.assign_color(options.border_color)
+	spots.assign_color(options.border_color, True)
 	spots.draw_flat_border(images.flattened()).save(filename)
 
 @logging
@@ -207,7 +186,7 @@ def draw_3D_colors(images, filename, spotss):
 	for name in spotss:
 		color_options = vars(options)[name]
 		for spot in spotss[name].spots:
-			images.cubes[color_options.channel][spot] = 255
+			images.cubes[color_options.channel][spot.coords] = 255
 	images.from_cubes()
 	images.save(filename)
 
