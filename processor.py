@@ -195,8 +195,9 @@ def draw_3D_images(images, filename):
 @logging
 def draw_3D_border(images, filename, spots):
 	images = images.clone()
-	spots = spots.expanded((0, 1, 1)) - spots
-	spots.draw_3D(images)
+	border = spots.expanded((0, 1, 1))
+	border -= spots
+	border.draw_3D(images)
 	images.save(filename)
 
 @logging

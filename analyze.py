@@ -92,9 +92,10 @@ class Spot(object):
 		for z, y, x in set(zip(*self.coords)):
 			images.images[z].putpixel((x, y), self.color)
 
-	def __sub__(self, other):
+	def __isub__(self, other):
 		coords = set(zip(*self.coords)) - set(zip(*other.coords))
-		return Spot(self.spots, zip(*coords))
+		self.coords = zip(*coords)
+		return self
 
 class Spots(object):
 
@@ -156,11 +157,11 @@ class Spots(object):
 		result.spots = [spot.expanded(d, spots=result) for spot in self.spots]
 		return result
 
-	def __sub__(self, other):
+	def __isub__(self, other):
 		"""Return set of spots minus pixels in `other` spots with same ids."""
-		result = Spots(self.cube)
-		result.spots = [a - b for a, b in zip(self.spots, other.spots)]
-		return result
+		for a, b in zip(self.spots, other.spots):
+			a -= b
+		return self
 
 	def assign_pixels(self, level, force=False):
 		"""Detect list of coordinates of pixels above level."""
@@ -230,17 +231,17 @@ class Spots(object):
 
 	def draw_flat_border(self, image):
 		"""Draw perimeter of spots on a flat image."""
-		border = Spots(self)
-		border.spots = []
+		borders = Spots(self)
+		borders.spots = []
 		for spot in self.spots:
 			Z, Y, X = spot.coords
 			Z = [0] * len(Z)
-			flat = Spot(border, (Z, Y, X))
-			spot = flat.expanded((0, 1, 1)) - flat
-			spot.spots = border
-			border.spots.append(spot)
-		border.assign_colors_from(self, True)
-		return border.draw_flat(image)
+			flat = Spot(borders, (Z, Y, X))
+			border = flat.expanded((0, 1, 1), borders)
+			border -= flat
+			borders.spots.append(border)
+		borders.assign_colors_from(self, True)
+		return borders.draw_flat(image)
 
 	def normalized_cube(self, quantile=0.75, level=100):
 		"""Return cube, normalized in spots by shifting pixel values."""
