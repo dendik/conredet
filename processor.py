@@ -110,13 +110,13 @@ def normalize_neighborhoods(neighborhoods, images):
 	shift_quantile = options.neighborhood_shift_quantile
 	level = options.neighborhood_set_level
 
-	save = neighborhoods.cube = images.cubes[channel]
+	save = answer = neighborhoods.cube = images.cubes[channel]
 	if stretch_quantiles is not None:
-		cube = neighborhoods.cube = neighborhoods.stretched_cube(*stretch_quantiles)
+		answer = neighborhoods.cube = neighborhoods.stretched_cube(*stretch_quantiles)
 	if shift_quantile:
-		cube = neighborhoods.normalized_cube(shift_quantile, level)
+		answer = neighborhoods.normalized_cube(shift_quantile, level)
 	images.cubes[channel] = neighborhoods.cube = save
-	return cube
+	return answer
 
 class Normalized(object):
 	def __init__(self, images):
@@ -265,9 +265,11 @@ def parse_environment_defaults(optparser):
 
 def parse_tuple_option(options, name, size=None, type=float):
 	value = getattr(options, name)
+	if value == "":
+		value = None
 	if isinstance(value, str):
 		value = tuple(map(type, value.split(",")))
-	if size is not None:
+	if value is not None and size is not None:
 		assert len(value) == size
 	setattr(options, name, value)
 
