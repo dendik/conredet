@@ -179,7 +179,7 @@ def draw_flat_spots(images, filename, spots, options, blackout=True):
 def draw_flat_colors(images, filename, spots, colors):
 	spots = Spots(spots)
 	espots = Spots(spots).expanded((0,3,3)).assign_few_colors(colors, True)
-	spots.assign_colors_from(espots)
+	spots.assign_colors_from(espots, True)
 	images = images.clone()
 	spots.draw_flat(images.flattened()).save(filename)
 
