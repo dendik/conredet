@@ -3,10 +3,10 @@ import os
 import glob
 import sys
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, median_filter
 from PIL import Image
 from analyze import Images, Spots
-from utils import log, logging
+from utils import log, logging, roundint
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
@@ -20,6 +20,10 @@ def main():
 	images = load_images()
 
 	draw_flat_images(images, "img-src.png")
+	draw_3D_images(images, "img-{n:02}.png")
+	despeckle_images(images)
+	draw_3D_images(images, "img-f{n:02}.png")
+
 	spotss = {}
 	normalized = Normalized(images)
 	for color_options in options.signal:
@@ -33,7 +37,6 @@ def main():
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
 	draw_flat_colors(images, "img-cterritories.png", territories, colors)
-	images.save("img-{n:02}.png")
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
 
@@ -69,6 +72,17 @@ def print_czi_metadata(czi):
 	for coord in "XYZ":
 		scaling, = czi.metadata.findall(".//Scaling" + coord)
 		log(coord, "scaling:", int(float(scaling.text) * 10**9), "nm")
+
+@logging
+def despeckle_images(images):
+	for color in ('red', 'green', 'blue'):
+		color_options = getattr(options, color)
+		channel = color_options.channel
+		cube = images.cubes[channel]
+		if color_options.despeckle:
+			cube = median_filter(cube, (3,1,1))
+		images.cubes[channel] = cube
+	return images.from_cubes()
 
 @logging
 def detect_signals(images, options):
@@ -130,7 +144,8 @@ def print_stats(spotss, images):
 		print color1, color2, size
 		print "spot", "x", "y", "z", "size", "occupancy"
 		for n, spot in enumerate(spots.spots):
-			print n, spot.center(), spot.size(), spot.occupancy(level)
+			z, y, x = map(roundint, spot.center())
+			print n, x, y, z, spot.size(), spot.occupancy(level)
 
 def iter_views(spotss, images):
 	for color in spotss:
@@ -174,6 +189,10 @@ def draw_flat_border(images, filename, spots):
 	spots.draw_flat_border(images.flattened()).save(filename)
 
 @logging
+def draw_3D_images(images, filename):
+	images.save(filename)
+
+@logging
 def draw_3D_border(images, filename, spots):
 	images = images.clone()
 	spots = spots.expanded((0, 1, 1)) - spots
@@ -209,6 +228,8 @@ def parse_options():
 			type=int, help="Maximal size of spot")
 		p.add_option(color + "-blur", type=float,
 			help="If non-zero, apply gausian blur; use parameter value as sigma")
+		p.add_option(color + "-despeckle", type=int,
+			help="Apply median filter before any processing")
 	p.add_option("--neighborhood-size", default=25, type=int,
 		help="Size (approx. half the side of square) of spot neighborhood")
 	p.add_option("--neighborhood-stretch-quantiles",

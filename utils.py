@@ -18,3 +18,6 @@ def logging(message):
 	else:
 		f, message = message, (message.__name__ + "...")
 		return decorator(f)
+
+def roundint(value):
+	return int(value + 0.5)
