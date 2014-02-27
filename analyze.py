@@ -50,8 +50,15 @@ class Spot(object):
 		return numpy.sum(self.spots.cube[self.coords])
 
 	def center(self):
-		"""Return center of mass of the spot."""
+		"""Return center of mass of the spot as a Z,Y,X tuple."""
 		return tuple(map(np.mean, self.coords))
+
+	def center_of_mass(self, cube=None):
+		"""Return center of mass of the spot as a Z,Y,X tuple."""
+		return tuple(
+			np.average(coord, weights=(cube or self.spots.cube[self.coords]))
+			for coord in self.coords
+		)
 
 	def values(self):
 		"""Return sorted list of pixel values in the spot."""
