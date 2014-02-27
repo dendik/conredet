@@ -51,7 +51,7 @@ class Spot(object):
 
 	def center(self):
 		"""Return center of mass of the spot."""
-		return center_of_mass(self.spots.cube[self.coords])
+		return tuple(map(np.mean, self.coords))
 
 	def values(self):
 		"""Return sorted list of pixel values in the spot."""
@@ -226,7 +226,7 @@ class Spots(object):
 			Z = [0] * len(Z)
 			flat = Spot(border, (Z, Y, X))
 			border.spots.append(flat.expanded((0, 1, 1)) - flat)
-		border.assign_colors_from(self)
+		border.assign_colors_from(self, True)
 		return border.draw_flat(image)
 
 	def normalized_cube(self, quantile=0.75, level=100):
