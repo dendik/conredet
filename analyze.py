@@ -45,9 +45,10 @@ class Spot(object):
 		"""Return number of pixels in the spot."""
 		return len(self.coords[0])
 
-	def mass(self):
+	def mass(self, cube=None):
 		"""Return sum of pixel values in the spot."""
-		return numpy.sum(self.spots.cube[self.coords])
+		cube = cube or self.spots.cube
+		return numpy.sum(cube[self.coords])
 
 	def center(self):
 		"""Return center of mass of the spot as a Z,Y,X tuple."""
@@ -55,25 +56,28 @@ class Spot(object):
 
 	def center_of_mass(self, cube=None):
 		"""Return center of mass of the spot as a Z,Y,X tuple."""
+		cube = cube or self.spots.cube
 		return tuple(
-			np.average(coord, weights=(cube or self.spots.cube[self.coords]))
+			np.average(coord, weights=cube[self.coords])
 			for coord in self.coords
 		)
 
-	def values(self):
+	def values(self, cube=None):
 		"""Return sorted list of pixel values in the spot."""
-		return sorted(self.spots.cube[self.coords].tolist())
+		cube = cube or self.spots.cube
+		return sorted(cube[self.coords].tolist())
 
-	def quantile(self, quantile):
+	def quantile(self, quantile, cube=None):
 		"""Find quantile value for the spot."""
-		values = self.values()
+		values = self.values(cube)
 		return values[int(quantile * len(values))]
 
-	def occupancy(self, level):
+	def occupancy(self, level, cube=None):
 		"""Return number of pixels above `level` in the spot."""
-		return np.count_nonzero(self.spots.cube[self.coords] > level)
+		cube = cube or self.spots.cube
+		return np.count_nonzero(cube[self.coords] > level)
 
-	def expanded(self, d=1):
+	def expanded(self, d=1, spots=None):
 		"""Return a copy of the spot expanded by the given dimensions."""
 		Z, Y, X = self.spots.cube.shape
 		coords = set(map(tuple, np.transpose(self.coords).tolist()))
@@ -81,7 +85,7 @@ class Spot(object):
 			coords |= set(xyzrange(coord, d))
 		coords = [(z, y, x) for z, y, x in coords
 			if 0 <= z < Z and 0 <= y < Y and 0 <= x < X]
-		return Spot(self.spots, zip(*coords))
+		return Spot(spots or self.spots, zip(*coords))
 
 	def draw_3D(self, images):
 		# XXX: this is the point of slowness; it must be done via numpy
@@ -149,7 +153,7 @@ class Spots(object):
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
 		result = Spots(self.cube)
-		result.spots = [spot.expanded(d) for spot in self.spots]
+		result.spots = [spot.expanded(d, spots=result) for spot in self.spots]
 		return result
 
 	def __sub__(self, other):
@@ -232,7 +236,9 @@ class Spots(object):
 			Z, Y, X = spot.coords
 			Z = [0] * len(Z)
 			flat = Spot(border, (Z, Y, X))
-			border.spots.append(flat.expanded((0, 1, 1)) - flat)
+			spot = flat.expanded((0, 1, 1)) - flat
+			spot.spots = border
+			border.spots.append(spot)
 		border.assign_colors_from(self, True)
 		return border.draw_flat(image)
 
