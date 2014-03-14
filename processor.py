@@ -10,13 +10,13 @@ from utils import log, logging, roundint
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
+option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 
 def main():
 	global options
 	options, args = parse_options()
-	log(options.red)
-	log(options.green)
-	log(options.blue)
+	for color in sorted(options.color):
+		log(options.color[color])
 	images = load_images()
 
 	draw_flat_images(images, "img-src.png")
@@ -33,7 +33,8 @@ def main():
 		neighborhoods = build_neighborhoods(this, images)
 		normalized.add(normalize_neighborhoods(neighborhoods, images))
 	images = normalized.get()
-	territories = spotss['territory'] = detect_signals(images, options.territory)
+	territories = detect_signals(images, options.color['territory'])
+	spotss['territory'] = territories
 	draw_flat_images(images, "img-normalized.png")
 	draw_flat_border(images, "img-bterritories.png", territories)
 	draw_flat_colors(images, "img-cterritories.png", territories, colors)
@@ -76,8 +77,7 @@ def print_czi_metadata(czi):
 
 @logging
 def despeckle_images(images):
-	for color in ('red', 'green', 'blue'):
-		color_options = getattr(options, color)
+	for color_options in options.color.values():
 		channel = color_options.channel
 		cube = images.cubes[channel]
 		if color_options.despeckle:
@@ -101,12 +101,12 @@ def detect_signals(images, options):
 def build_neighborhoods(spots, images):
 	size = options.neighborhood_size
 	neighborhoods = spots.expanded((0, size, size))
-	neighborhoods.assign_cube(images.cubes[options.territory.channel])
+	neighborhoods.assign_cube(images.cubes[options.color['territory'].channel])
 	return neighborhoods
 
 @logging
 def normalize_neighborhoods(neighborhoods, images):
-	channel = options.territory.channel
+	channel = options.color['territory'].channel
 	stretch_quantiles = options.neighborhood_stretch_quantiles
 	shift_quantile = options.neighborhood_shift_quantile
 	level = options.neighborhood_set_level
@@ -122,7 +122,7 @@ def normalize_neighborhoods(neighborhoods, images):
 class Normalized(object):
 	def __init__(self, images):
 		self.images = images
-		self.channel = options.territory.channel
+		self.channel = options.color['territory'].channel
 		self.cube = np.zeros(images.cubes[self.channel].shape, 'uint8')
 	def add(self, cube):
 		self.cube = np.maximum(self.cube, cube)
@@ -155,8 +155,7 @@ def iter_views(spotss):
 			espots = Spots(spotss[color]).expanded((0, size, size))
 			for other_color in spotss:
 				if other_color != color:
-					color_options = vars(options)[other_color]
-					yield color, other_color, size, espots, color_options
+					yield color, other_color, size, espots, options.color[other_color]
 
 @logging
 def print_spots(spotss):
@@ -221,7 +220,7 @@ def draw_3D_border(images, filename, spots):
 def draw_3D_colors(images, filename, spotss):
 	images = images.clone()
 	for name in spotss:
-		color_options = vars(options)[name]
+		color_options = options.color[name]
 		for spot in spotss[name].spots:
 			images.cubes[color_options.channel][spot.coords] = 255
 	images.from_cubes()
@@ -237,7 +236,8 @@ def parse_options():
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-o", "--out-stats", help="outfile with stats (default: stdout)")
 	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
-	for color in ("--red", "--green", "--blue"):
+	for color in sorted(option_colors):
+		color = "--" + color
 		p.add_option(color + "-role", help="Either of: empty, signal, territory")
 		p.add_option(color + "-level", default=120, type=int,
 			help="Minimal signal level on this channel")
@@ -297,25 +297,28 @@ def parse_tuple_options(options):
 	parse_tuple_option(options, 'border_color', size=3, type=int)
 
 def split_color_options(options):
-	for n, color in enumerate(("red", "green", "blue")):
+	options.color = {}
+	for color in option_colors:
 		color_options = optparse.Values()
-		color_options.channel = n
+		color_options.channel = option_colors[color]
 		color_options.color = color
 		for option, value in vars(options).items():
 			if option.startswith(color + "_"):
 				option = option.split("_", 1)[-1]
 				setattr(color_options, option, value)
-		setattr(options, color, color_options)
+		options.color[color] = color_options
 
 def parse_color_list_options(options):
 	options.signal = []
-	options.territory = None
-	for color_options in (options.red, options.green, options.blue):
-		if color_options.role == "signal":
+	for color in tuple(options.color):
+		color_options = options.color[color]
+		if color_options.role in (None, '', 'empty'):
+			del options.color[color]
+		elif color_options.role == 'signal':
 			options.signal.append(color_options)
-		elif color_options.role == "territory":
-			assert options.territory is None
-			options.territory = color_options
+		elif color_options.role == 'territory':
+			assert 'territory' not in options.color
+			options.color['territory'] = color_options
 
 if __name__ == "__main__":
 	main()
