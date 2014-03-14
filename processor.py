@@ -26,21 +26,25 @@ def main():
 
 	spotss = {}
 	normalized = Normalized(images)
-	for color_options in options.signal:
-		this = spotss[color_options.color] = detect_signals(images, color_options)
-		draw_flat_spots(images, "img-c{color}.png", this, color_options)
-		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
-		neighborhoods = build_neighborhoods(this, images)
-		normalized.add(normalize_neighborhoods(neighborhoods, images))
+	process_colors(spotss, images, options.signal, normalized)
+
 	images = normalized.get()
-	territories = detect_signals(images, options.color['territory'])
-	spotss['territory'] = territories
 	draw_flat_images(images, "img-normalized.png")
-	draw_flat_border(images, "img-bterritories.png", territories)
-	draw_flat_colors(images, "img-cterritories.png", territories, colors)
+
+	process_colors(spotss, images, options.territories)
+
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
 	print_spots(spotss)
+
+def process_colors(spotss, images, colors, normalized=None):
+	for color_options in colors:
+		this = spotss[color_options.color] = detect_signals(images, color_options)
+		draw_flat_spots(images, "img-c{color}.png", this, color_options)
+		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
+		if normalized:
+			neighborhoods = build_neighborhoods(this, images)
+			normalized.add(normalize_neighborhoods(neighborhoods, images))
 
 # --------------------------------------------------
 # Input & preprocessing
@@ -101,12 +105,12 @@ def detect_signals(images, options):
 def build_neighborhoods(spots, images):
 	size = options.neighborhood_size
 	neighborhoods = spots.expanded((0, size, size))
-	neighborhoods.assign_cube(images.cubes[options.color['territory'].channel])
+	neighborhoods.assign_cube(images.cubes[options.normalize_channel])
 	return neighborhoods
 
 @logging
 def normalize_neighborhoods(neighborhoods, images):
-	channel = options.color['territory'].channel
+	channel = options.normalize_channel
 	stretch_quantiles = options.neighborhood_stretch_quantiles
 	shift_quantile = options.neighborhood_shift_quantile
 	level = options.neighborhood_set_level
@@ -122,7 +126,7 @@ def normalize_neighborhoods(neighborhoods, images):
 class Normalized(object):
 	def __init__(self, images):
 		self.images = images
-		self.channel = options.color['territory'].channel
+		self.channel = options.normalize_channel
 		self.cube = np.zeros(images.cubes[self.channel].shape, 'uint8')
 	def add(self, cube):
 		self.cube = np.maximum(self.cube, cube)
@@ -238,7 +242,8 @@ def parse_options():
 	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
 	for color in sorted(option_colors):
 		color = "--" + color
-		p.add_option(color + "-role", help="Either of: empty, signal, territory")
+		p.add_option(color + "-role",
+			help="Either of: empty, signal, territory, core")
 		p.add_option(color + "-level", default=120, type=int,
 			help="Minimal signal level on this channel")
 		p.add_option(color + "-min-size", default=15,
@@ -310,6 +315,8 @@ def split_color_options(options):
 
 def parse_color_list_options(options):
 	options.signal = []
+	options.territories = []
+	options.normalize_channel = None
 	for color in tuple(options.color):
 		color_options = options.color[color]
 		if color_options.role in (None, '', 'empty'):
@@ -317,8 +324,9 @@ def parse_color_list_options(options):
 		elif color_options.role == 'signal':
 			options.signal.append(color_options)
 		elif color_options.role == 'territory':
-			assert 'territory' not in options.color
-			options.color['territory'] = color_options
+			assert options.normalize_channel in (None, color_options.channel)
+			options.normalize_channel = color_options.channel
+			options.territories.append(color_options)
 
 if __name__ == "__main__":
 	main()
