@@ -39,6 +39,7 @@ def main():
 	draw_flat_colors(images, "img-cterritories.png", territories, colors)
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
+	print_spots(spotss)
 
 # --------------------------------------------------
 # Input & preprocessing
@@ -157,6 +158,22 @@ def iter_views(spotss):
 					color_options = vars(options)[other_color]
 					yield color, other_color, size, espots, color_options
 
+@logging
+def print_spots(spotss):
+	if options.out_spots:
+		sys.stdout = open(options.out_spots, 'w')
+	
+	for color in spotss:
+		for other in spotss:
+			if other == color:
+				continue
+			print
+			print color, other, "intersected-ids"
+			other_spots = spotss[other]
+			for n, spot in enumerate(spotss[color].spots):
+				ids = spot.intersection_ids(other_spots)
+				print n, " ".join(map(str, ids))
+
 # --------------------------------------------------
 # Images output
 #
@@ -219,6 +236,7 @@ def parse_options():
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-o", "--out-stats", help="outfile with stats (default: stdout)")
+	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
 	for color in ("--red", "--green", "--blue"):
 		p.add_option(color + "-role", help="Either of: empty, signal, territory")
 		p.add_option(color + "-level", default=120, type=int,

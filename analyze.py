@@ -97,6 +97,15 @@ class Spot(object):
 		self.coords = zip(*coords)
 		return self
 
+	def intersection_spots(self, spots):
+		"""Return a list of spots from `spots` that intersect `self`."""
+		return [spots.spots[n] for n in self.intersection_ids(spots)]
+
+	def intersection_ids(self, spots):
+		"""Return a list of ids spots from `spots` that intersect `self`."""
+		spots.assign_spots_cube()
+		return set(spots.spots_cube[self.coords]) - set([spots.spots_cube_null])
+
 class Spots(object):
 
 	def __init__(self, cube, colors=None):
@@ -107,6 +116,7 @@ class Spots(object):
 		self.pixels = set()
 		self.spots = []
 		self.has_colors = False
+		self.spots_cube = None
 
 	def detect_cc(self, level):
 		"""Detect spots as connected components of intensive pixels."""
@@ -215,6 +225,16 @@ class Spots(object):
 	def assign_cube(self, cube):
 		"""Nice way of setting self.cube."""
 		self.cube = cube
+		return self
+
+	def assign_spots_cube(self, force=False):
+		"""Create `self.spots_cube`, with ids of spots in cells."""
+		if force or not self.spots_cube is not None:
+			self.spots_cube_null = len(self.spots) + 1
+			self.spots_cube = np.zeros(self.cube.shape, dtype='uint16')
+			self.spots_cube.fill(self.spots_cube_null)
+			for n, spot in enumerate(self.spots):
+				self.spots_cube[spot.coords] = n
 		return self
 
 	def draw_flat(self, image):
