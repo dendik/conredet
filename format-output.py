@@ -140,10 +140,26 @@ def print_good():
 		if spot.good:
 			print spot
 
+def print_with_prefix():
+	for color in Spot.colors:
+		if '2' in color:
+			cell_color = color
+	for cell in Spot.known.values():
+		if cell.color != cell_color:
+			continue
+		for spot in cell.overlaps:
+			print options.with_prefix,
+			print cell.number,
+			print cell.sizes[0],
+			print spot.color,
+			print spot.number,
+			print " ".join(map(str, spot.coords))
+
 if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
 	p.add_option("-a", "--all", action="store_true")
+	p.add_option("-p", "--with-prefix")
 	options, args = p.parse_args()
 
 	stats, spots = args
@@ -154,3 +170,5 @@ if __name__ == "__main__":
 		print_all()
 	if options.good:
 		print_good()
+	if options.with_prefix:
+		print_with_prefix()
