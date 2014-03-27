@@ -41,7 +41,8 @@ def main():
 def process_colors(spotss, images, colors, normalized=None):
 	for color_options in colors:
 		log("I'm going slightly", color_options.color, "...")
-		this = spotss[color_options.color] = detect_signals(images, color_options)
+		cube = detection_filters(images, color_options)
+		this = spotss[color_options.color] = detect_signals(cube, color_options)
 		draw_flat_spots(images, "img-c{color}.png", this, color_options)
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
 		if normalized:
@@ -92,27 +93,44 @@ def despeckle_images(images):
 	return images.from_cubes()
 
 @logging
-def detect_signals(images, options):
-	spots = Spots(images.cubes[options.channel])
-	if options.blur:
-		cube = images.cubes[options.channel].astype('float')
-		cube = gaussian_filter(cube, options.blur)
-		spots = Spots(cube.astype('uint8'))
-	if options.blur_detect:
-		spots = blur_for_detection(images, options)
-	#spots.assign_pixels(options.level).filter_tight_pixels()
+def detect_signals(cube, options):
+	spots = Spots(cube)
+	if options.tight:
+		spots.assign_pixels(options.level).filter_tight_pixels(options.tight)
 	spots.detect_cc(options.level)
 	spots.filter_by_size(options.min_size, options.max_size)
 	return spots
 
+class Re(object):
+	had_match = False
+	def __init__(self, text):
+		self.text = text
+	def __call__(self, expr):
+		self.match = re.match(expr, self.text)
+		self.had_match = self.had_match or self.match
+		return self.match
+	def get(self, group=1, func=(lambda x: x), default=None):
+		return func(self.match.group(group) or default)
+	def __getitem__(self, arg):
+		return self.get(*arg)
+
 @logging
-def blur_for_detection(images, options):
-	cube = images.cubes[options.channel].astype('float')
-	blur_cube = gaussian_filter(cube, 10)
-	max_cube = maximum_filter(blur_cube, (3, 9, 9))
-	cube = (cube - blur_cube) * 100 / max_cube
-	cube = cube.clip(0, 255).astype('uint8')
-	return Spots(cube)
+def detection_filters(images, options):
+	cube = src_cube = images.cubes[options.channel].astype('float')
+	if options.blur:
+		arg = Re(text=options.blur.replace(' ', ''))
+		if arg(r'peak.*\(([0-9.]*)(?:,([0-9]*))?\)'):
+			sigma, side = arg[1, float, 1], arg[2, int, 3]
+			blur_cube = gaussian_filter(cube, sigma)
+			max_cube = maximum_filter(blur_cube, (side, side * 3, side * 3))
+			cube = (cube - blur_cube) * 100 / max_cube
+			#draw_3D_cubes((cube, blur_cube, max_cube), 't-%s-{n:02}.png' % options.color)
+			draw_flat_cubes([cube, blur_cube, max_cube], 'blur-{}.png'.format(options.color))
+		if arg(r'gauss.*\(([0-9.]*)\)'):
+			cube = gaussian_filter(cube, arg[1, float, 1])
+			draw_flat_cube(cube, 'blur-{}.png'.format(options.color))
+		assert arg.had_match, 'invalid syntax in --{}-blur'.format(options.color)
+	return cube.clip(0, 255).astype('uint8')
 
 @logging
 def build_neighborhoods(spots, images):
@@ -222,6 +240,19 @@ def draw_flat_border(images, filename, spots):
 	spots.draw_flat_border(images.flattened()).save(filename)
 
 @logging
+def draw_flat_cubes(cubes, filename):
+	cubes = [cube.clip(0, 255).astype('uint8') for cube in cubes]
+	Images().from_cubes(cubes).flattened().save(filename)
+
+def draw_flat_cube(cube, filename):
+	draw_flat_cubes([cube, cube, cube], filename)
+
+@logging
+def draw_3D_cubes(cubes, filename):
+	cubes = [cube.clip(0, 255).astype('uint8') for cube in cubes]
+	Images().from_cubes(cubes).save(filename)
+
+@logging
 def draw_3D_images(images, filename):
 	images.save(filename)
 
@@ -263,10 +294,10 @@ def parse_options():
 			type=int, help="Minimal size of spot")
 		p.add_option(color + "-max-size", default=500,
 			type=int, help="Maximal size of spot")
-		p.add_option(color + "-blur", type=float,
-			help="If non-zero, apply gausian blur; use parameter value as sigma")
-		p.add_option(color + "-blur-detect", type=int,
-			help="Detect signal by subtracting blurred image from the original")
+		p.add_option(color + "-blur",
+			help="Apply filters. Either gauss(sigma) or peak(sigma, [side])")
+		p.add_option(color + "-tight", type=int,
+			help="Require that much pixels in neighborhood to add pixel to signal")
 		p.add_option(color + "-despeckle", type=int,
 			help="Apply median filter before any processing")
 	p.add_option("--normalize-channel", default=0, type=int)
