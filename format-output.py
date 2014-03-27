@@ -144,6 +144,7 @@ def print_with_prefix():
 	for color in Spot.colors:
 		if '2' in color:
 			cell_color = color
+	print 'prefix cell_number cell_size spot_color spot_number x y z'
 	for cell in Spot.known.values():
 		if cell.color != cell_color:
 			continue
