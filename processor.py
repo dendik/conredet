@@ -2,8 +2,9 @@ import optparse
 import os
 import glob
 import sys
+import re
 import numpy as np
-from scipy.ndimage import gaussian_filter, median_filter
+from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
 from analyze import Images, Spots
 from utils import log, logging, roundint
@@ -39,6 +40,7 @@ def main():
 
 def process_colors(spotss, images, colors, normalized=None):
 	for color_options in colors:
+		log("I'm going slightly", color_options.color, "...")
 		this = spotss[color_options.color] = detect_signals(images, color_options)
 		draw_flat_spots(images, "img-c{color}.png", this, color_options)
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
@@ -96,10 +98,21 @@ def detect_signals(images, options):
 		cube = images.cubes[options.channel].astype('float')
 		cube = gaussian_filter(cube, options.blur)
 		spots = Spots(cube.astype('uint8'))
+	if options.blur_detect:
+		spots = blur_for_detection(images, options)
 	#spots.assign_pixels(options.level).filter_tight_pixels()
 	spots.detect_cc(options.level)
 	spots.filter_by_size(options.min_size, options.max_size)
 	return spots
+
+@logging
+def blur_for_detection(images, options):
+	cube = images.cubes[options.channel].astype('float')
+	blur_cube = gaussian_filter(cube, 10)
+	max_cube = maximum_filter(blur_cube, (3, 9, 9))
+	cube = (cube - blur_cube) * 100 / max_cube
+	cube = cube.clip(0, 255).astype('uint8')
+	return Spots(cube)
 
 @logging
 def build_neighborhoods(spots, images):
@@ -252,8 +265,11 @@ def parse_options():
 			type=int, help="Maximal size of spot")
 		p.add_option(color + "-blur", type=float,
 			help="If non-zero, apply gausian blur; use parameter value as sigma")
+		p.add_option(color + "-blur-detect", type=int,
+			help="Detect signal by subtracting blurred image from the original")
 		p.add_option(color + "-despeckle", type=int,
 			help="Apply median filter before any processing")
+	p.add_option("--normalize-channel", default=0, type=int)
 	p.add_option("--neighborhood-size", default=25, type=int,
 		help="Size (approx. half the side of square) of spot neighborhood")
 	p.add_option("--neighborhood-stretch-quantiles",
@@ -316,7 +332,6 @@ def split_color_options(options):
 def parse_color_list_options(options):
 	options.signal = []
 	options.territories = []
-	options.normalize_channel = None
 	for color in tuple(options.color):
 		color_options = options.color[color]
 		if color_options.role in (None, '', 'empty'):
@@ -324,8 +339,6 @@ def parse_color_list_options(options):
 		elif color_options.role == 'signal':
 			options.signal.append(color_options)
 		elif color_options.role == 'territory':
-			assert options.normalize_channel in (None, color_options.channel)
-			options.normalize_channel = color_options.channel
 			options.territories.append(color_options)
 
 if __name__ == "__main__":
