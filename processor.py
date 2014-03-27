@@ -12,6 +12,7 @@ from utils import log, logging, roundint
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
+draw_colors = ('red', 'green', 'blue')
 
 def main():
 	global options
@@ -23,7 +24,7 @@ def main():
 	draw_flat_images(images, "img-src.png")
 	draw_3D_images(images, "img-{n:02}.png")
 	despeckle_images(images)
-	draw_3D_images(images, "img-f{n:02}.png")
+	#draw_3D_images(images, "img-f{n:02}.png")
 
 	spotss = {}
 	normalized = Normalized(images)
@@ -34,6 +35,7 @@ def main():
 
 	process_colors(spotss, images, options.territories)
 
+	draw_flat_channels(images, "img-colors.png", spotss)
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
 	print_spots(spotss)
@@ -43,7 +45,6 @@ def process_colors(spotss, images, colors, normalized=None):
 		log("I'm going slightly", color_options.color, "...")
 		cube = detection_filters(images, color_options)
 		this = spotss[color_options.color] = detect_signals(cube, color_options)
-		draw_flat_spots(images, "img-c{color}.png", this, color_options)
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
 		if normalized:
 			neighborhoods = build_neighborhoods(this, images)
@@ -235,6 +236,10 @@ def draw_flat_colors(images, filename, spots, colors):
 	spots.draw_flat(images.flattened()).save(filename)
 
 @logging
+def draw_flat_channels(images, filename, spotss):
+	spots_by_channels(images, spotss).flattened().save(filename)
+
+@logging
 def draw_flat_border(images, filename, spots):
 	spots.assign_color(options.border_color, True)
 	spots.draw_flat_border(images.flattened()).save(filename)
@@ -266,13 +271,16 @@ def draw_3D_border(images, filename, spots):
 
 @logging
 def draw_3D_colors(images, filename, spotss):
+	spots_by_channels(images, spotss).save(filename)
+
+def spots_by_channels(images, spotss):
 	images = images.clone()
 	for name in spotss:
 		color_options = options.color[name]
 		for spot in spotss[name].spots:
-			images.cubes[color_options.channel][spot.coords] = 255
-	images.from_cubes()
-	images.save(filename)
+			if name in draw_colors:
+				images.cubes[color_options.channel][spot.coords] = 255
+	return images.from_cubes()
 
 # --------------------------------------------------
 # Option parsing
