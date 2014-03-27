@@ -131,7 +131,7 @@ def print_good():
 		blue = len(spot.overlaps_by('blue'))
 		red = len(spot.overlaps_by('red'))
 
-		if green == blue == red:
+		if green == blue == 2:
 			spot.good = True
 			for spot in spot.overlaps:
 				spot.good = True
@@ -142,9 +142,15 @@ def print_good():
 
 if __name__ == "__main__":
 	p = optparse.OptionParser()
+	p.add_option("-g", "--good", action="store_true")
+	p.add_option("-a", "--all", action="store_true")
 	options, args = p.parse_args()
 
 	stats, spots = args
 	parse_stats(open(stats))
 	parse_spots(open(spots))
-	print_good()
+
+	if options.all:
+		print_all()
+	if options.good:
+		print_good()
