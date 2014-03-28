@@ -45,6 +45,9 @@ class Spot(object):
 	def overlaps_by(self, color):
 		return set([spot for spot in self.overlaps if spot.color == color])
 
+	def is_cell(self):
+		return '2' in self.color
+
 	def repr_overlaps(self, color=None):
 		if color is None:
 			return "; ".join(
@@ -113,52 +116,48 @@ def parse_spots(fd):
 				spot1.overlaps.add(spot2)
 				spot2.overlaps.add(spot1)
 
+def mark_good():
+	Spot.good = False
+	for spot in Spot.known.values():
+		if spot.is_cell():
+			green = len(spot.overlaps_by('green'))
+			blue = len(spot.overlaps_by('blue'))
+			red = len(spot.overlaps_by('red'))
+
+			if green == blue == 2:
+				spot.good = True
+				for spot in spot.overlaps:
+					spot.good = True
+
 def print_all():
 	for (color, number), spot in sorted(Spot.known.items()):
 		print spot
 
 def print_good():
-	for color in Spot.colors:
-		if '2' in color:
-			cell_color = color
-
-	Spot.good = False
-	for spot in Spot.known.values():
-		if spot.color != cell_color:
-			continue
-
-		green = len(spot.overlaps_by('green'))
-		blue = len(spot.overlaps_by('blue'))
-		red = len(spot.overlaps_by('red'))
-
-		if green == blue == 2:
-			spot.good = True
-			for spot in spot.overlaps:
-				spot.good = True
-
+	mark_good()
 	for (color, number), spot in sorted(Spot.known.items()):
 		if spot.good:
 			print spot
 
-def print_with_prefix():
-	for color in Spot.colors:
-		if '2' in color:
-			cell_color = color
+def print_good_cells(prefix):
+	mark_good()
+	for (color, number), spot in sorted(Spot.known.items()):
+		if spot.good and spot.is_cell():
+			print prefix, spot
+
+def print_with_prefix(prefix):
 	print 'prefix cell_number cell_size spot_color spot_number x y z'
 	for cell in Spot.known.values():
-		if cell.color != cell_color:
+		if not cell.is_cell():
 			continue
 		for spot in cell.overlaps:
-			print options.with_prefix,
-			print cell.number,
-			print cell.sizes[0],
-			print spot.color,
-			print spot.number,
-			print " ".join(map(str, spot.coords))
+			print prefix, cell.number, cell.sizes[0],
+			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
+	p.add_option("-c", "--good-cells")
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix")
 	options, args = p.parse_args()
@@ -171,5 +170,7 @@ if __name__ == "__main__":
 		print_all()
 	if options.good:
 		print_good()
+	if options.good_cells:
+		print_good_cells(options.good_cells)
 	if options.with_prefix:
-		print_with_prefix()
+		print_with_prefix(options.with_prefix)
