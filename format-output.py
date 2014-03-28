@@ -1,5 +1,6 @@
 import optparse
 from math import sqrt
+from utils import log
 
 class Spot(object):
 	known = {}
@@ -31,7 +32,7 @@ class Spot(object):
 			difference = sqrt(sum((a-b) ** 2 for a, b in zip(self.coords, coords)))
 			if difference > getattr(Spot, 'difference', 0):
 				Spot.difference = difference
-				print 'coords mismatch', difference, self.coords, coords
+				log('coords mismatch', difference, self.coords, coords)
 		#assert not self.coords or self.coords == coords
 		self.coords = coords
 		return self
