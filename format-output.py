@@ -28,14 +28,18 @@ class Spot(object):
 
 	def set_coords(self, coords):
 		coords = tuple(map(float, coords))
+		if options.verbose:
+			self.assert_same_coords(coords)
+		self.coords = coords
+		return self
+
+	def assert_same_coords(self, coords):
 		if self.coords and self.coords != coords:
 			difference = sqrt(sum((a-b) ** 2 for a, b in zip(self.coords, coords)))
 			if difference > getattr(Spot, 'difference', 0):
 				Spot.difference = difference
 				log('coords mismatch', difference, self.coords, coords)
 		#assert not self.coords or self.coords == coords
-		self.coords = coords
-		return self
 
 	def set_size(self, extension, size):
 		size = int(size)
@@ -161,6 +165,7 @@ if __name__ == "__main__":
 	p.add_option("-c", "--good-cells")
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix")
+	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 
 	stats, spots = args
