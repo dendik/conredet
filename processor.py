@@ -2,12 +2,11 @@ import optparse
 import os
 import glob
 import sys
-import re
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
 from analyze import Images, Spots
-from utils import log, logging, roundint
+from utils import log, logging, roundint, Re
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
@@ -102,35 +101,37 @@ def detect_signals(cube, options):
 	spots.filter_by_size(options.min_size, options.max_size)
 	return spots
 
-class Re(object):
-	had_match = False
-	def __init__(self, text):
-		self.text = text
-	def __call__(self, expr):
-		self.match = re.match(expr, self.text)
-		self.had_match = self.had_match or self.match
-		return self.match
-	def get(self, group=1, func=(lambda x: x), default=None):
-		return func(self.match.group(group) or default)
-	def __getitem__(self, arg):
-		return self.get(*arg)
+class Filters(object):
+
+	def __init__(self, cube, string, color):
+		self.cube = self.src_cube = cube
+		self.color = color
+		for func in string.split(';'):
+			eval('self.' + func)
+
+	def peak(self, sigma, side=3):
+		blur_cube = gaussian_filter(self.cube, sigma)
+		max_cube = maximum_filter(blur_cube, (side, side * 3, side * 3))
+		self.cube = (self.cube - blur_cube) * 100 / max_cube
+		draw_flat_cubes([self.cube, blur_cube, max_cube],
+			'blur-{}-all.png'.format(self.color))
+		#draw_3D_cubes((cube, blur_cube, max_cube),
+		#	'blur-%s-{n:02}.png' % self.color)
+
+	def gauss(self, sigma):
+		self.cube = gaussian_filter(self.cube, sigma)
+
+	def max(self, dx, dy=None, dz=None):
+		if dy is None or dz is None:
+			dx, dy, dz = dx * 3, dx * 3, dx
+		self.cube = maximum_filter(self.cube, (dz, dy, dx))
 
 @logging
 def detection_filters(images, options):
-	cube = src_cube = images.cubes[options.channel].astype('float')
+	cube = images.cubes[options.channel].astype('float')
 	if options.blur:
-		arg = Re(text=options.blur.replace(' ', ''))
-		if arg(r'peak.*\(([0-9.]*)(?:,([0-9]*))?\)'):
-			sigma, side = arg[1, float, 1], arg[2, int, 3]
-			blur_cube = gaussian_filter(cube, sigma)
-			max_cube = maximum_filter(blur_cube, (side, side * 3, side * 3))
-			cube = (cube - blur_cube) * 100 / max_cube
-			#draw_3D_cubes((cube, blur_cube, max_cube), 't-%s-{n:02}.png' % options.color)
-			draw_flat_cubes([cube, blur_cube, max_cube], 'blur-{}.png'.format(options.color))
-		if arg(r'gauss.*\(([0-9.]*)\)'):
-			cube = gaussian_filter(cube, arg[1, float, 1])
-			draw_flat_cube(cube, 'blur-{}.png'.format(options.color))
-		assert arg.had_match, 'invalid syntax in --{}-blur'.format(options.color)
+		cube = Filters(cube, options.blur, options.color).cube
+		draw_flat_cube(cube, 'blur-{}.png'.format(options.color))
 	return cube.clip(0, 255).astype('uint8')
 
 @logging
