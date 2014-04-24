@@ -1,3 +1,4 @@
+import re
 import sys
 import time
 import functools
@@ -21,3 +22,16 @@ def logging(message):
 
 def roundint(value):
 	return int(value + 0.5)
+
+class Re(object):
+	had_match = False
+	def __init__(self, text):
+		self.text = text
+	def __call__(self, expr):
+		self.match = re.search(expr, self.text)
+		self.had_match = self.had_match or self.match
+		return self.match
+	def get(self, group=1, func=(lambda x: x), default=None):
+		return func(self.match.group(group) or default)
+	def __getitem__(self, arg):
+		return self.get(*arg)
