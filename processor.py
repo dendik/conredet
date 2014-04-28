@@ -118,6 +118,14 @@ class Filters(object):
 		#draw_3D_cubes((cube, blur_cube, max_cube),
 		#	'blur-%s-{n:02}.png' % self.color)
 
+	def peak2(self, sigma=2, sides1=(1,11,11), sides2=(3,99,99)):
+		no_peaks = gaussian_filter(self.cube, sigma)
+		background1 = maximum_filter(no_peaks, sides1)
+		background2 = maximum_filter(no_peaks, sides2)
+		cube1 = self.cube / (background1 + 1)
+		cube2 = self.cube / (background2 + 1)
+		self.sube = cube1 * cube2 * 100
+
 	def gauss(self, sigma):
 		self.cube = gaussian_filter(self.cube, sigma)
 
@@ -125,6 +133,11 @@ class Filters(object):
 		if dy is None or dz is None:
 			dx, dy, dz = dx * 3, dx * 3, dx
 		self.cube = maximum_filter(self.cube, (dz, dy, dx))
+
+	def median(self, dx, dy=None, dz=None):
+		if dy is None or dz is None:
+			dx, dy, dz = dx * 3, dx * 3, dx
+		self.cube = median_filter(self.cube, (dz, dy, dx))
 
 @logging
 def detection_filters(images, options):
