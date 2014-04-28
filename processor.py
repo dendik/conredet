@@ -196,7 +196,7 @@ def print_stats(spotss, images):
 		print "spot", "x", "y", "z", "size", "occupancy"
 		spots.assign_cube(images.cubes[color_options.channel])
 		for n, spot in enumerate(spots.spots):
-			z, y, x = map(roundint, spot.center())
+			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center())
 			print n, x, y, z, spot.size(), spot.occupancy(color_options.level)
 
 def iter_views(spotss):
