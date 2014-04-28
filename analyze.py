@@ -31,7 +31,7 @@ from itertools import izip
 from PIL import Image, ImageChops
 import numpy as np
 from scipy.ndimage.measurements import center_of_mass
-from utils import log
+from utils import log, xyzrange, xyzvrange, find_components
 
 infinity = 10**6 # very big number, big enough to be bigger than any spot
 
@@ -330,40 +330,3 @@ class Images(object):
 
 	def clone(self):
 		return Images().from_cubes([cube.copy() for cube in self.cubes])
-
-### Helpers
-
-def find_components(edges):
-	"""Find connected components from graph defined by edges dictionary."""
-	graph = dict(edges)
-	components = []
-	while graph != {}:
-		vertex, neighbors = graph.popitem()
-		component = set([vertex])
-		while neighbors != []:
-			vertex = neighbors.pop()
-			component |= set([vertex])
-			if vertex in graph:
-				neighbors += graph.pop(vertex)
-		components.append(component)
-	return components
-
-def xyzvrange((x0, y0, z0)):
-	"""Iterate over coords of neighbors differing in exactly one coord."""
-	yield x0 - 1, y0, z0
-	yield x0, y0 - 1, z0
-	yield x0, y0, z0 - 1
-	yield x0 + 1, y0, z0
-	yield x0, y0 + 1, z0
-	yield x0, y0, z0 + 1
-
-def xyzrange((x0, y0, z0), d=1):
-	"""Iterate over coords in neighbourhood of point `xyz` of size `d`."""
-	try:
-		dx, dy, dz = d
-	except Exception:
-		dx = dy = dz = d
-	for x in xrange(x0 - dx, x0 + dx + 1):
-		for y in xrange(y0 - dy, y0 + dy + 1):
-			for z in xrange(z0 - dz, z0 + dz + 1):
-				yield x, y, z
