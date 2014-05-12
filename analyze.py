@@ -106,6 +106,12 @@ class Spot(object):
 		spots.assign_spots_cube()
 		return set(spots.spots_cube[self.coords]) - set([spots.spots_cube_null])
 
+	def intersection_occupancy(self, spots):
+		"""Return size of intersection with any spot in `spots`."""
+		spots.assign_spots_cube()
+		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
+		return np.count_nonzero(non_null)
+
 class Spots(object):
 
 	def __init__(self, cube, colors=None):
