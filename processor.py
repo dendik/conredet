@@ -118,13 +118,25 @@ class Filters(object):
 		#draw_3D_cubes((cube, blur_cube, max_cube),
 		#	'blur-%s-{n:02}.png' % self.color)
 
+	def peak1(self, sigma=2, sides=(1,99,99)):
+		no_peaks = gaussian_filter(self.cube, sigma)
+		background = maximum_filter(no_peaks, sides)
+		self.cube = self.cube / (background + 1) * 100
+
 	def peak2(self, sigma=2, sides1=(1,11,11), sides2=(3,99,99)):
 		no_peaks = gaussian_filter(self.cube, sigma)
 		background1 = maximum_filter(no_peaks, sides1)
 		background2 = maximum_filter(no_peaks, sides2)
 		cube1 = self.cube / (background1 + 1)
 		cube2 = self.cube / (background2 + 1)
-		self.sube = cube1 * cube2 * 100
+		self.cube = cube1 * cube2 * 100
+
+	def peak3(self, sigma=2, sides=(1,99,99), w_near=1, w_far=1):
+		no_peaks = gaussian_filter(self.cube, sigma)
+		background = maximum_filter(no_peaks, sides)
+		cube1 = self.cube / no_peaks
+		cube2 = no_peaks / background
+		self.cube = (cube1 ** 2 * w_near + cube2 ** 2 * w_far) / (w_near + w_far) * 100
 
 	def gauss(self, sigma):
 		self.cube = gaussian_filter(self.cube, sigma)
