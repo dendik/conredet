@@ -202,14 +202,13 @@ def print_stats(spotss, images):
 	if options.out_stats:
 		sys.stdout = open(options.out_stats, 'w')
 
-	for color1, color2, size, spots, color_options in iter_views(spotss):
+	for color1, color2, size, spots, other in iter_views(spotss):
 		print ""
 		print color1, color2, size
 		print "spot", "x", "y", "z", "size", "occupancy"
-		spots.assign_cube(images.cubes[color_options.channel])
 		for n, spot in enumerate(spots.spots):
 			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center())
-			print n, x, y, z, spot.size(), spot.occupancy(color_options.level)
+			print n, x, y, z, spot.size(), spot.intersection_occupancy(other)
 
 def iter_views(spotss):
 	for color in spotss:
@@ -217,7 +216,8 @@ def iter_views(spotss):
 			espots = Spots(spotss[color]).expanded((0, size, size))
 			for other_color in spotss:
 				if other_color != color:
-					yield color, other_color, size, espots, options.color[other_color]
+					other = spotss[other_color]
+					yield color, other_color, size, espots, other
 
 @logging
 def print_spots(spotss):
