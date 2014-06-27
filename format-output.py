@@ -159,9 +159,12 @@ def print_good_coords(prefix):
 			reds = [spot for spot in spot.overlaps if spot.color == 'red']
 			if len(reds) != 2:
 				continue
+			a, b, c = [np.array(spot.coords) for spot in reds + [spot]]
+			ab, ac = b - a, c - a
+			distance = abs(ab[0] + 1j*ab[1])
+			angle = np.angle(ab[0] + 1j*ab[1], ac[0] + 1j*ac[1])
 			print prefix,
-			a, b = reds
-			print " ".join(map(str, tuple(np.array(a.coords) - np.array(b.coords))))
+			print " ".join(map(str, list(ab) + [distance, angle]))
 
 def print_with_prefix(prefix):
 	print 'prefix cell_number cell_size spot_color spot_number x y z'
