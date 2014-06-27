@@ -2,6 +2,7 @@ import optparse
 from os.path import join
 from math import sqrt
 from utils import log
+import numpy as np
 
 class Spot(object):
 	known = {}
@@ -151,6 +152,17 @@ def print_good_cells(prefix):
 		if spot.good and spot.is_cell():
 			print prefix, spot
 
+def print_good_coords(prefix):
+	mark_good()
+	for (color, number), spot in sorted(Spot.known.items()):
+		if spot.good and spot.is_cell():
+			reds = [spot for spot in spot.overlaps if spot.color == 'red']
+			if len(reds) != 2:
+				continue
+			print prefix,
+			a, b = reds
+			print " ".join(map(str, tuple(np.array(a.coords) - np.array(b.coords))))
+
 def print_with_prefix(prefix):
 	print 'prefix cell_number cell_size spot_color spot_number x y z'
 	for cell in Spot.known.values():
@@ -164,6 +176,7 @@ if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
 	p.add_option("-c", "--good-cells", action="store_true")
+	p.add_option("--good-coords", action="store_true")
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
@@ -180,5 +193,7 @@ if __name__ == "__main__":
 		print_good()
 	if options.good_cells:
 		print_good_cells(prefix)
+	if options.good_coords:
+		print_good_coords(prefix)
 	if options.with_prefix:
 		print_with_prefix(prefix)
