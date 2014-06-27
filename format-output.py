@@ -172,20 +172,14 @@ def print_with_prefix(prefix):
 			print prefix, cell.number, cell.sizes[0],
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
-if __name__ == "__main__":
-	p = optparse.OptionParser()
-	p.add_option("-g", "--good", action="store_true")
-	p.add_option("-c", "--good-cells", action="store_true")
-	p.add_option("--good-coords", action="store_true")
-	p.add_option("-a", "--all", action="store_true")
-	p.add_option("-p", "--with-prefix", action="store_true")
-	p.add_option("-v", "--verbose", action="store_true")
-	options, args = p.parse_args()
-	prefix, = args
+def print_series(prefix):
+	Spot.known = {}
+	Spot.colors = set()
 
-	stats, spots = join(prefix, "stats.csv"), join(prefix, "spots.csv")
-	parse_stats(open(stats))
-	parse_spots(open(spots))
+	with open(join(prefix, 'stats.csv')) as stats:
+		parse_stats(stats)
+	with open(join(prefix, 'spots.csv')) as spots:
+		parse_spots(spots)
 
 	if options.all:
 		print_all()
@@ -197,3 +191,15 @@ if __name__ == "__main__":
 		print_good_coords(prefix)
 	if options.with_prefix:
 		print_with_prefix(prefix)
+
+if __name__ == "__main__":
+	p = optparse.OptionParser()
+	p.add_option("-g", "--good", action="store_true")
+	p.add_option("-c", "--good-cells", action="store_true")
+	p.add_option("--good-coords", action="store_true")
+	p.add_option("-a", "--all", action="store_true")
+	p.add_option("-p", "--with-prefix", action="store_true")
+	p.add_option("-v", "--verbose", action="store_true")
+	options, args = p.parse_args()
+	for prefix in args:
+		print_series(prefix)
