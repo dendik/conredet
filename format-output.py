@@ -1,4 +1,5 @@
 import optparse
+from os.path import join
 from math import sqrt
 from utils import log
 
@@ -162,13 +163,14 @@ def print_with_prefix(prefix):
 if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
-	p.add_option("-c", "--good-cells")
+	p.add_option("-c", "--good-cells", action="store_true")
 	p.add_option("-a", "--all", action="store_true")
-	p.add_option("-p", "--with-prefix")
+	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
+	prefix, = args
 
-	stats, spots = args
+	stats, spots = join(prefix, "stats.csv"), join(prefix, "spots.csv")
 	parse_stats(open(stats))
 	parse_spots(open(spots))
 
@@ -177,6 +179,6 @@ if __name__ == "__main__":
 	if options.good:
 		print_good()
 	if options.good_cells:
-		print_good_cells(options.good_cells)
+		print_good_cells(prefix)
 	if options.with_prefix:
-		print_with_prefix(options.with_prefix)
+		print_with_prefix(prefix)
