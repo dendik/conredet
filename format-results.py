@@ -1,5 +1,14 @@
 import optparse
 import results
+import numpy as np
+from math import acos
+
+header = True
+def print_header(*args):
+	global header
+	if header:
+		print " ".join(map(str, args))
+		header = False
 
 def print_all(series):
 	for spot in series.sorted_spots():
@@ -17,8 +26,9 @@ def print_good_cells(series):
 		if cell.good:
 			print series.prefix, cell
 
-def print_good_coords(prefix):
-	mark_good()
+def print_good_coords(series):
+	series.mark_good()
+	print_header("prefix dx dy dz distance c-t1-t2-angle t1-c-t2-angle")
 	for spot in series.sorted_cells():
 		if not spot.good:
 			continue
@@ -29,21 +39,19 @@ def print_good_coords(prefix):
 		a, b, c = [other.center for other in reds + [spot]]
 		ab, ac, bc = b - a, c - a, c - b
 		distance = np.linalg.norm(ab)
-		#angle = np.angle(ab[0] + 1j*ab[1], ac[0] + 1j*ac[1])
-		#angle2 = np.angle(ac[0] + 1j*ac[1], bc[0] + 1j*bc[1])
 		angle = acos(np.vdot(ab, ac) / np.linalg.norm(ab) / np.linalg.norm(ac))
 		angle2 = acos(np.vdot(bc, ac) / np.linalg.norm(bc) / np.linalg.norm(ac))
-		print prefix,
+		print series.prefix,
 		print " ".join(map(str, list(ab) + [distance, angle, angle2])),
 		print "#", spot,
 		print a, b, c,
 		print ab, ac
 
-def print_with_prefix(prefix):
-	print 'prefix cell_number cell_size spot_color spot_number x y z'
+def print_with_prefix(series):
+	print_header('prefix cell_number cell_size spot_color spot_number x y z')
 	for cell in series.sorted_cells:
 		for spot in cell.overlaps:
-			print prefix, cell.number, cell.sizes[0],
+			print series.prefix, cell.number, cell.sizes[0],
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 def print_series(prefix):
