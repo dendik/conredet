@@ -1,5 +1,4 @@
 from os.path import join
-from math import acos
 from utils import log
 import numpy as np
 
@@ -24,7 +23,7 @@ class Series(object):
 		return (self.spots[key] for key in sorted(self.spots))
 
 	def sorted_cells(self):
-		return (spot for spot in self.sorted_spots if spot.is_cell())
+		return (spot for spot in self.sorted_spots() if spot.is_cell())
 
 	def spot(self, color, number):
 		color, number = str(color), int(number)
