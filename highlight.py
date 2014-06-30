@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw
-import format_output
+import results
 import optparse
 import math
 from os.path import join
@@ -12,8 +12,7 @@ p.add_option("-o", "--image-out", default="view-img-bblue.png")
 p.add_option("-d", "--distance", type=float, help="min distance between paired signals")
 options, args = p.parse_args()
 
-options.verbose = False
-format_output.options = options
+results.verbose = False
 
 def all_pairs(spot):
 	return [(spot1, spot2)
@@ -40,18 +39,12 @@ def max_distance(spot):
 
 for prefix in args:
 	print "Processing", prefix
-	format_output.Spot.known = {}
-	format_output.Spot.colors = set()
-
-	with open(join(prefix, "stats.csv")) as stats:
-		format_output.parse_stats(stats)
-	with open(join(prefix, "spots.csv")) as spots:
-		format_output.parse_spots(spots)
+	series = results.Series(prefix)
+	series.mark_good()
 
 	img = Image.open(join(prefix, options.image)).convert('RGB')
 	draw = ImageDraw.Draw(img)
-	format_output.mark_good()
-	for _, spot in sorted(format_output.Spot.known.items()):
+	for spot in sorted(series.spots.values()):
 		if not spot.good or not spot.is_cell():
 			continue
 		if options.distance and max_distance(spot) < options.distance:
