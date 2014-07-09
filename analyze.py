@@ -119,7 +119,7 @@ class Ellipsoid(Spot):
 	def __init__(self, spots, navel, radii):
 		Spot.__init__(self, spots, ())
 		self.navel = navel
-		self.radii = radii
+		self.radii = tuple(max(v, 1.5) for v in radii)
 		self.coords = self._coords()
 
 	def _coords(self):
@@ -133,7 +133,7 @@ class Ellipsoid(Spot):
 
 	def _shift(self, coords):
 		"""Shift coords from center=radii to center=navel. Clip to cube."""
-		v_column = lambda v: np.array(v).reshape((3,1))
+		v_column = lambda v: np.array(v, dtype='int').reshape((3,1))
 		coords = np.array(coords) - v_column(self.radii) + v_column(self.navel)
 		return tuple(
 			coords[coord].clip(0, size - 1)
@@ -183,6 +183,7 @@ class Spots(object):
 		for _ in range(n):
 			navel = np.unravel_index(np.argmax(cube), cube.shape)
 			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
+			cube[sphere.coords] = 0
 			sphere.optimize_navel()
 			cube[sphere.coords] = 0
 			spheres.append(sphere)
@@ -224,6 +225,13 @@ class Spots(object):
 		"""Return set of spots expanded by `d` pixels in each direction."""
 		result = Spots(self.cube)
 		result.spots = [spot.expanded(d, spots=result) for spot in self.spots]
+		return result
+
+	def ellipsoids(self, radii=(0,1,1)):
+		"""Return set of spots replaced by ellipsoids with given radii."""
+		result = Spots(self.cube)
+		centers = (map(int, spot.center_of_mass()) for spot in self.spots)
+		result.spots = [Ellipsoid(self, center, radii) for center in centers]
 		return result
 
 	def __isub__(self, other):
