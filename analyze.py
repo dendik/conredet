@@ -36,6 +36,7 @@ from utils import log, xyzrange, xyzvrange, find_components
 infinity = 10**6 # very big number, big enough to be bigger than any spot
 
 class Spot(object):
+
 	def __init__(self, spots, coords):
 		self.spots = spots
 		self.coords = coords
@@ -112,6 +113,33 @@ class Spot(object):
 		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
 		return np.count_nonzero(non_null)
 
+class Ellipsoid(Spot):
+	"""Sperical spot."""
+
+	def __init__(self, spots, navel, radii):
+		Spot.__init__(self, spots, ())
+		self.navel = navel
+		self.radii = radii
+		self.coords = self._coords()
+
+	def _coords(self):
+		"""Calculate coordinates for the ellipsoid"""
+		rz2, ry2, rx2 = [
+			np.linspace(-1, 1, num=int(2*radius)) ** 2
+			for radius in self.radii
+		]
+		distance_squared = rz2[:, None, None] + ry2[:, None] + rx2
+		return self._shift(np.where(distance_squared <= 1))
+
+	def _shift(self, coords):
+		"""Shift coords from center=radii to center=navel. Clip to cube."""
+		v_column = lambda v: np.array(v).reshape((3,1))
+		coords = np.array(coords) - v_column(self.radii) + v_column(self.navel)
+		return tuple(
+			coords[coord].clip(0, size - 1)
+			for coord, size in enumerate(self.spots.cube.shape)
+		)
+
 class Spots(object):
 
 	def __init__(self, cube, colors=None):
@@ -134,6 +162,18 @@ class Spots(object):
 					edges.setdefault(pixel, []).append(other)
 		self.spots = [Spot(self, zip(*sorted(coords)))
 			for coords in find_components(edges)]
+		return self
+
+	def detect_spheres(self, n, radius):
+		"""Detect spots by greedily fitting spheres."""
+		cube = self.cube.copy()
+		spheres = []
+		for _ in range(n):
+			navel = np.unravel_index(np.argmax(cube), cube.shape)
+			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
+			cube[sphere.coords] = 0
+			spheres.append(sphere)
+		self.spots = spheres
 		return self
 
 	def filter_tight_pixels(self, neighbors=15, distance=1):

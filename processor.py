@@ -94,12 +94,26 @@ def despeckle_images(images):
 
 @logging
 def detect_signals(cube, options):
-	spots = Spots(cube)
-	if options.tight:
-		spots.assign_pixels(options.level).filter_tight_pixels(options.tight)
-	spots.detect_cc(options.level)
+	spots = Detectors(cube, options).spots
 	spots.filter_by_size(options.min_size, options.max_size)
 	return spots
+
+class Detectors(object):
+	def __init__(self, cube, options):
+		self.spots = Spots(cube)
+		self.options = options
+		for func in options.detect.split(';'):
+			eval('self.' + func)
+
+	def tight(self, level, tightness):
+		self.spots.assign_pixels(level).filter_tight_pixels(tightness)
+		self.cc(level)
+
+	def cc(self, level):
+		self.spots.detect_cc(level)
+
+	def spheres(self, n, radius):
+		self.spots.detect_spheres(n, radius)
 
 class Filters(object):
 
@@ -322,16 +336,15 @@ def parse_options():
 		color = "--" + color
 		p.add_option(color + "-role",
 			help="Either of: empty, signal, territory, core")
-		p.add_option(color + "-level", default=120, type=int,
-			help="Minimal signal level on this channel")
+		p.add_option(color + "-detect", default='cc(120)',
+			help="Detection functions. Default: cc(120)."
+			" Alternatives: cc(level), tight(level, tightness), spheres(N, radius)")
 		p.add_option(color + "-min-size", default=15,
 			type=int, help="Minimal size of spot")
 		p.add_option(color + "-max-size", default=500,
 			type=int, help="Maximal size of spot")
 		p.add_option(color + "-blur",
 			help="Apply filters. Either gauss(sigma) or peak(sigma, [side])")
-		p.add_option(color + "-tight", type=int,
-			help="Require that much pixels in neighborhood to add pixel to signal")
 		p.add_option(color + "-despeckle", type=int,
 			help="Apply median filter before any processing")
 	p.add_option("--normalize-channel", default=0, type=int)
