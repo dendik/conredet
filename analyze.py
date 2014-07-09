@@ -140,6 +140,18 @@ class Ellipsoid(Spot):
 			for coord, size in enumerate(self.spots.cube.shape)
 		)
 
+	def optimize_navel(self, iterations=100):
+		"""Optimize the brightness of the whole ellipsoid by moving center."""
+		centers = zip(*self.coords)
+		alternatives = (
+			Ellipsoid(self.spots, random.choice(centers), self.radii)
+			for _ in range(iterations)
+		)
+		best = max(alternatives,
+			key=lambda spot: self.spots.cube[spot.coords].sum())
+		self.navel = best.navel
+		self.coords = best.coords
+
 class Spots(object):
 
 	def __init__(self, cube, colors=None):
@@ -171,6 +183,7 @@ class Spots(object):
 		for _ in range(n):
 			navel = np.unravel_index(np.argmax(cube), cube.shape)
 			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
+			sphere.optimize_navel()
 			cube[sphere.coords] = 0
 			spheres.append(sphere)
 		self.spots = spheres
