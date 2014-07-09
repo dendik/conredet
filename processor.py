@@ -176,7 +176,7 @@ def detection_filters(images, options):
 @logging
 def build_neighborhoods(spots, images):
 	size = options.neighborhood_size
-	neighborhoods = spots.expanded((0, size, size))
+	neighborhoods = spots.ellipsoids((1, size, size))
 	neighborhoods.assign_cube(images.cubes[options.normalize_channel])
 	return neighborhoods
 
