@@ -140,15 +140,16 @@ class Ellipsoid(Spot):
 			for coord, size in enumerate(self.spots.cube.shape)
 		)
 
-	def optimize_navel(self, iterations=100):
+	def optimize_navel(self, iterations=100, cube=None):
 		"""Optimize the brightness of the whole ellipsoid by moving center."""
+		if cube is None:
+			cube = self.spots.cube
 		centers = zip(*self.coords)
 		alternatives = (
 			Ellipsoid(self.spots, random.choice(centers), self.radii)
 			for _ in range(iterations)
 		)
-		best = max(alternatives,
-			key=lambda spot: self.spots.cube[spot.coords].sum())
+		best = max(alternatives, key=lambda spot: cube[spot.coords].sum())
 		self.navel = best.navel
 		self.coords = best.coords
 
@@ -163,6 +164,7 @@ class Spots(object):
 		self.spots = []
 		self.has_colors = False
 		self.spots_cube = None
+		self.darkness_cube = None
 
 	def detect_cc(self, level):
 		"""Detect spots as connected components of intensive pixels."""
@@ -176,15 +178,16 @@ class Spots(object):
 			for coords in find_components(edges)]
 		return self
 
-	def detect_spheres(self, n, radius):
+	def detect_spheres(self, n, radius, shift=100):
 		"""Detect spots by greedily fitting spheres."""
 		cube = self.cube.copy()
+		weights_cube = cube + shift - self.assign_darkness().darkness_cube * shift
 		spheres = []
 		for _ in range(n):
 			navel = np.unravel_index(np.argmax(cube), cube.shape)
 			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
 			cube[sphere.coords] = 0
-			sphere.optimize_navel()
+			sphere.optimize_navel(cube=weights_cube)
 			cube[sphere.coords] = 0
 			spheres.append(sphere)
 		self.spots = spheres
@@ -245,6 +248,12 @@ class Spots(object):
 		if force or not self.pixels:
 			coords = (self.cube > level).nonzero()
 			self.pixels = set(izip(*coords))
+		return self
+
+	def assign_darkness(self, percentile=90, force=False):
+		"""Mark `percentile`% of the darkest points as likely intercellular."""
+		if force or self.darkness_cube is None:
+			self.darkness_cube = self.cube <= np.percentile(self.cube, percentile)
 		return self
 
 	def assign_few_colors(self,
