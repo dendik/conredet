@@ -36,6 +36,18 @@ class Re(object):
 	def __getitem__(self, arg):
 		return self.get(*arg)
 
+class Substitute(object):
+	"""With-block with `object`.`attr` temporarily replaced by `value`."""
+	def __init__(self, object, attr, value):
+		self.object = object
+		self.attr = attr
+		self.value = value
+	def __enter__(self):
+		self.backup = getattr(self.object, self.attr)
+		setattr(self.object, self.attr, self.value)
+	def __exit__(self, e_type, e_value, e_tb):
+		setattr(self.object, self.attr, self.backup)
+
 def xyzvrange((x0, y0, z0)):
 	"""Iterate over coords of neighbors differing in exactly one coord."""
 	yield x0 - 1, y0, z0

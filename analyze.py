@@ -31,7 +31,7 @@ from itertools import izip
 from PIL import Image, ImageChops
 import numpy as np
 from scipy.ndimage.measurements import center_of_mass
-from utils import log, xyzrange, xyzvrange, find_components
+from utils import Substitute, log, xyzrange, xyzvrange, find_components
 
 infinity = 10**6 # very big number, big enough to be bigger than any spot
 
@@ -122,6 +122,10 @@ class Ellipsoid(Spot):
 		self.radii = tuple(max(v, 1.5) for v in radii)
 		self.coords = self._coords()
 
+	def with_radii(self, radii):
+		"""Return a copy of self with different `radii`."""
+		return Ellipsoid(self.spots, self.navel, radii)
+
 	def _coords(self):
 		"""Calculate coordinates for the ellipsoid"""
 		rz2, ry2, rx2 = [
@@ -140,17 +144,17 @@ class Ellipsoid(Spot):
 			for coord, size in enumerate(self.spots.cube.shape)
 		)
 
-	def optimize_navel(self, iterations=5, cube=None):
+	def optimize_navel(self, iterations=5):
 		"""Optimize the brightness of the whole ellipsoid by moving center."""
-		if cube is None:
-			cube = self.spots.cube
-		backup, self.spots.cube = self.spots.cube, cube
 		candidate = self
 		for step in range(iterations):
 			candidate = Ellipsoid(self.spots, candidate.center_of_mass(), self.radii)
 		self.navel = candidate.navel
 		self.coords = candidate.coords
-		self.spots.cube = backup
+
+	def wipe(self):
+		"""Wipe everything under `self`."""
+		self.spots.cube[self.coords] = 0
 
 class Spots(object):
 
@@ -177,17 +181,17 @@ class Spots(object):
 			for coords in find_components(edges)]
 		return self
 
-	def detect_spheres(self, n, radius):
+	def detect_spheres(self, n, radius, wipe_radius):
 		"""Detect spots by greedily fitting spheres."""
-		cube = self.cube.copy()
-		spheres = []
-		for _ in range(n):
-			navel = np.unravel_index(np.argmax(cube), cube.shape)
-			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
-			sphere.optimize_navel(cube=cube)
-			cube[sphere.coords] =  0
-			spheres.append(sphere)
-		self.spots = spheres
+		with self.substitute_cube(self.cube.copy()):
+			spheres = []
+			for _ in range(n):
+				navel = np.unravel_index(np.argmax(self.cube), self.cube.shape)
+				sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
+				sphere.optimize_navel()
+				sphere.with_radii((wipe_radius/3, wipe_radius, wipe_radius)).wipe()
+				spheres.append(sphere)
+			self.spots = spheres
 		return self
 
 	def filter_tight_pixels(self, neighbors=15, distance=1):
@@ -355,6 +359,9 @@ class Spots(object):
 			res = (frag - low) * 256.0 / (high - low)
 			result[spot.coords] = res
 		return result.clip(0, 255).astype('uint8')
+
+	def substitute_cube(self, cube):
+		return Substitute(self, 'cube', cube)
 
 class Images(object):
 	def __init__(self, filenames=None, images=()):

@@ -112,8 +112,8 @@ class Detectors(object):
 	def cc(self, level):
 		self.spots.detect_cc(level)
 
-	def spheres(self, n, radius):
-		self.spots.detect_spheres(n, radius)
+	def spheres(self, n, radius, wipe_radius=None):
+		self.spots.detect_spheres(n, radius, wipe_radius or radius)
 
 class Filters(object):
 
