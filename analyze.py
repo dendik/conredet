@@ -140,18 +140,17 @@ class Ellipsoid(Spot):
 			for coord, size in enumerate(self.spots.cube.shape)
 		)
 
-	def optimize_navel(self, iterations=100, cube=None):
+	def optimize_navel(self, iterations=5, cube=None):
 		"""Optimize the brightness of the whole ellipsoid by moving center."""
 		if cube is None:
 			cube = self.spots.cube
-		centers = zip(*self.coords)
-		alternatives = (
-			Ellipsoid(self.spots, random.choice(centers), self.radii)
-			for _ in range(iterations)
-		)
-		best = max(alternatives, key=lambda spot: cube[spot.coords].sum())
-		self.navel = best.navel
-		self.coords = best.coords
+		backup, self.spots.cube = self.spots.cube, cube
+		candidate = self
+		for step in range(iterations):
+			candidate = Ellipsoid(self.spots, candidate.center_of_mass(), self.radii)
+		self.navel = candidate.navel
+		self.coords = candidate.coords
+		self.spots.cube = backup
 
 class Spots(object):
 
@@ -178,17 +177,15 @@ class Spots(object):
 			for coords in find_components(edges)]
 		return self
 
-	def detect_spheres(self, n, radius, shift=100):
+	def detect_spheres(self, n, radius):
 		"""Detect spots by greedily fitting spheres."""
 		cube = self.cube.copy()
-		weights_cube = cube + shift - self.assign_darkness().darkness_cube * shift
 		spheres = []
 		for _ in range(n):
 			navel = np.unravel_index(np.argmax(cube), cube.shape)
 			sphere = Ellipsoid(self, navel, (radius/3, radius, radius))
-			cube[sphere.coords] = 0
-			sphere.optimize_navel(cube=weights_cube)
-			cube[sphere.coords] = 0
+			sphere.optimize_navel(cube=cube)
+			cube[sphere.coords] =  0
 			spheres.append(sphere)
 		self.spots = spheres
 		return self

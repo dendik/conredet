@@ -112,9 +112,8 @@ class Detectors(object):
 	def cc(self, level):
 		self.spots.detect_cc(level)
 
-	def spheres(self, n, radius, percentile=90, shift=100):
-		self.spots.assign_darkness(percentile)
-		self.spots.detect_spheres(n, radius, shift=shift)
+	def spheres(self, n, radius):
+		self.spots.detect_spheres(n, radius)
 
 class Filters(object):
 
