@@ -49,7 +49,7 @@ class Spot(object):
 	def mass(self, cube=None):
 		"""Return sum of pixel values in the spot."""
 		cube = cube or self.spots.cube
-		return numpy.sum(cube[self.coords])
+		return np.sum(cube[self.coords])
 
 	def center(self):
 		"""Return center of mass of the spot as a Z,Y,X tuple."""
@@ -112,6 +112,27 @@ class Spot(object):
 		spots.assign_spots_cube()
 		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
 		return np.count_nonzero(non_null)
+
+	def distance_to_variety(self, spots, max_distance=20, d=1):
+		spots.assign_spots_cube()
+		spot = self
+		for n in range(max_distance):
+			if len(set(spots.spots_cube[spot.coords])) != 1:
+				return n
+			spot = spot.expanded(d)
+		return infinity
+
+	def center_to_variety(self, spots, max_distance=20, d=1):
+		if not isinstance(d, tuple):
+			d = d, d, d
+		d = np.array(d)
+		center = self.center_of_mass()
+		spots.assign_spots_cube()
+		for n in range(max_distance):
+			spot = Ellipsoid(self.spots, center, (d*n).astype('int'))
+			if len(set(spots.spots_cube[spot.coords])) != 1:
+				return n
+		return infinity
 
 class Ellipsoid(Spot):
 	"""Sperical spot."""

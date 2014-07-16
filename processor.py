@@ -38,6 +38,7 @@ def main():
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
 	print_stats(spotss, images)
 	print_spots(spotss)
+	print_distances(spotss)
 
 def process_colors(spotss, images, colors, normalized=None):
 	for color_options in colors:
@@ -237,7 +238,7 @@ def iter_views(spotss):
 def print_spots(spotss):
 	if options.out_spots:
 		sys.stdout = open(options.out_spots, 'w')
-	
+
 	for color in spotss:
 		for other in spotss:
 			if other == color:
@@ -248,6 +249,24 @@ def print_spots(spotss):
 			for n, spot in enumerate(spotss[color].spots):
 				ids = spot.intersection_ids(other_spots)
 				print n, " ".join(map(str, ids))
+
+@logging
+def print_distances(spotss):
+	if options.out_distances:
+		sys.stdout = open(options.out_distances, 'w')
+
+	for color in ('blue', 'green'):
+		for other in ('red',):
+			if other == color:
+				continue
+			print
+			print color, other, "extend", "ellipsoid"
+			other_spots = spotss[other]
+			for n, spot in enumerate(spotss[color].spots):
+				print n,
+				print spot.distance_to_variety(other_spots, d=(0, 1, 1)),
+				print spot.center_to_variety(other_spots, d=(0.3, 1, 1)),
+				print
 
 # --------------------------------------------------
 # Images output
@@ -332,6 +351,7 @@ def parse_options():
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-o", "--out-stats", help="outfile with stats (default: stdout)")
 	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
+	p.add_option("-d", "--out-distances", help="distances outfile (or stdout)")
 	for color in sorted(option_colors):
 		color = "--" + color
 		p.add_option(color + "-role",
