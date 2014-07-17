@@ -18,6 +18,8 @@ class Series(object):
 			self.parse_stats(stats)
 		with open(join(prefix, 'spots.csv')) as spots:
 			self.parse_spots(spots)
+		with open(join(prefix, 'distances.csv')) as distances:
+			self.parse_distances(distances)
 
 	def sorted_spots(self):
 		return (self.spots[key] for key in sorted(self.spots))
@@ -31,42 +33,48 @@ class Series(object):
 			self.spots[color, number] = Spot(self, color, number)
 		return self.spots[color, number]
 
-	def parse_stats(self, fd):
+	@staticmethod
+	def parse_blocks(fd, n_headers=2):
 		for line in fd:
 			line = line.strip()
 			parts = line.split()
 			if not line:
-				color1, color2 = None, None
-			elif not color1 and not color2:
-				color1, color2, extension = parts
-				extension = int(extension)
-			elif 'spot' in parts:
-				continue
+				headers = None
+			elif not headers:
+				headers = parts[:n_headers]
 			else:
-				number, x, y, z, size, occupancy = parts
-				spot = self.spot(color1, number)
-				spot.set_coords((x, y, z))
-				spot.set_size(extension, size)
-				spot.occupancies[extension, color2] = occupancy
+				yield headers + parts
+
+	def parse_stats(self, fd):
+		line = self.parse_blocks(fd, 3)
+		for color1, color2, extension, number, x, y, z, size, occupancy in line:
+			if number == 'spot':
+				continue
+			extension = int(extension)
+			spot = self.spot(color1, number)
+			spot.set_coords((x, y, z))
+			spot.set_size(extension, size)
+			spot.occupancies[extension, color2] = occupancy
 
 	def parse_spots(self, fd):
-		for line in fd:
-			line = line.strip()
-			parts = line.split()
-			if not line:
-				color1, color2 = None, None
-			elif not color1 and not color2:
-				color1, color2 = parts[:2]
-			else:
-				spot1 = self.spot(color1, parts[0])
-				for number in parts[1:]:
-					spot2 = self.spot(color2, number)
-					spot1.overlaps.add(spot2)
-					spot2.overlaps.add(spot1)
+		for parts in self.parse_blocks(fd):
+			(color1, color2, number), overlaps = parts[:3], parts[3:]
+			spot1 = self.spot(color1, number)
+			for number in overlaps:
+				spot2 = self.spot(color2, number)
+				spot1.overlaps.add(spot2)
+				spot2.overlaps.add(spot1)
 
 	def parse_scale(self, fd):
 		for line in fd:
 			self.scale = np.array(map(float, line.strip().split()[:3]))
+
+	def parse_distances(self, fd):
+		line = self.parse_blocks(fd)
+		for color1, color2, number, o_distance, r_distance in line:
+			spot1 = self.spot(color1, number)
+			spot1.o_distances[color2] = float(o_distance)
+			spot1.r_distances[color2] = float(r_distance)
 
 	def mark_good(self):
 		Spot.good = False
@@ -100,6 +108,8 @@ class Spot(object):
 		self.sizes = {}
 		self.occupancies = {}
 		self.overlaps = set()
+		self.o_distances = {}
+		self.r_distances = {}
 
 	def set_coords(self, coords):
 		self.coords = tuple(float(v) for v in coords)

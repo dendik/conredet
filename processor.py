@@ -264,8 +264,8 @@ def print_distances(spotss):
 			other_spots = spotss[other]
 			for n, spot in enumerate(spotss[color].spots):
 				print n,
-				print spot.distance_to_variety(other_spots, d=(0, 1, 1)),
-				print spot.center_to_variety(other_spots, d=(0.3, 1, 1)),
+				print spot.distance_to_variety(other_spots, d=(0, 1, 1)) or -1,
+				print spot.center_to_variety(other_spots, d=(0.3, 1, 1)) or -1,
 				print
 
 # --------------------------------------------------
