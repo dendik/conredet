@@ -54,19 +54,23 @@ def print_with_prefix(series):
 			print series.prefix, cell.number, cell.sizes[0],
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
+def print_distances(series):
+	print_header('prefix cell_number spot_color territory_size o_distance r_distance')
+	for spot in series.sorted_spots():
+		for color2 in spot.o_distances:
+			territory_size = sum((other.sizes[0] for other in spot.overlaps if other.color == color2), 0)
+			print series.prefix, spot.number, spot.color, territory_size,
+			print spot.o_distances[color2], spot.r_distances[color2]
+
 def print_series(prefix):
 	series = results.Series(prefix)
 
-	if options.all:
-		print_all(series)
-	if options.good:
-		print_good(series)
-	if options.good_cells:
-		print_good_cells(series)
-	if options.good_coords:
-		print_good_coords(series)
-	if options.with_prefix:
-		print_with_prefix(series)
+	for function_name, function in globals().items():
+		if not function_name.startswith('print_'):
+			continue
+		option_name = function_name.split('print_', 1)[-1]
+		if getattr(options, option_name, False):
+			function(series)
 
 if __name__ == "__main__":
 	p = optparse.OptionParser()
@@ -75,6 +79,7 @@ if __name__ == "__main__":
 	p.add_option("--good-coords", action="store_true")
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix", action="store_true")
+	p.add_option("--distances", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 	for prefix in args:

@@ -120,7 +120,6 @@ class Spot(object):
 			if len(set(spots.spots_cube[spot.coords])) != 1:
 				return n
 			spot = spot.expanded(d)
-		return infinity
 
 	def center_to_variety(self, spots, max_distance=20, d=1):
 		if not isinstance(d, tuple):
@@ -132,7 +131,6 @@ class Spot(object):
 			spot = Ellipsoid(self.spots, center, (d*n).astype('int'))
 			if len(set(spots.spots_cube[spot.coords])) != 1:
 				return n
-		return infinity
 
 class Ellipsoid(Spot):
 	"""Sperical spot."""
