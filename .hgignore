@@ -1,2 +1,8 @@
 syntax: glob
+
 *.pyc
+sloth/
+
+# Temoprary & test stuff
+?
+?.*
