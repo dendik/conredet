@@ -139,6 +139,17 @@ class Spot(object):
 	def is_cell(self):
 		return '2' in self.color
 
+	def other_signal(self, pairs={'green':'blue', 'blue':'green'}):
+		spot, = (spot for spot in self.overlaps if spot.color == pairs[self.color])
+		return spot
+
+	def is_not_broken(self):
+		try:
+			spot = self.other_signal()
+		except Exception:
+			return False
+		return self.occupancies[0, spot.color] >= (min(self.size, spot.size) / 2)
+
 	def repr_overlaps(self, color=None):
 		if color is None:
 			return "; ".join(
