@@ -55,12 +55,29 @@ def print_with_prefix(series):
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 def print_distances(series):
-	print_header('prefix cell_number spot_color territory_size o_distance r_distance')
+	print_header('prefix spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size o_distance r_distance territory_occupancy')
+	series.mark_good()
 	for spot in series.sorted_spots():
+		if not spot.good:
+			continue
+		try:
+			other = spot.other_signal()
+		except Exception:
+			continue
 		for color2 in spot.o_distances:
 			territory_size = sum((other.sizes[0] for other in spot.overlaps if other.color == color2), 0)
-			print series.prefix, spot.number, spot.color, territory_size,
-			print spot.o_distances[color2], spot.r_distances[color2]
+			print series.prefix, spot.number, spot.color, spot.sizes[0],
+			print other.color, other.sizes[0], spot.occupancies[0, other.color],
+			print color2, territory_size,
+			print spot.o_distances[color2], spot.r_distances[color2], spot.occupancies[0, 'red']
+
+def print_cell_distances(series):
+	print_header('prefix cell_number spot_number spot_color spot_size distance')
+	for cell in series.sorted_cells():
+		for spot in cell.overlaps:
+			d = (cell.center - spot.center)
+			print series.prefix, cell.number, spot.number, spot.color, spot.sizes[0],
+			print d.dot(d) ** 0.5
 
 def print_series(prefix):
 	series = results.Series(prefix)
@@ -80,6 +97,7 @@ if __name__ == "__main__":
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("--distances", action="store_true")
+	p.add_option("--cell-distances", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 	for prefix in args:
