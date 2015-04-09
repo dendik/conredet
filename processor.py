@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
+
 from analyze import Images, Spots
 from utils import log, logging, roundint, Re
 
@@ -26,13 +27,17 @@ def main():
 	#draw_3D_images(images, "img-f{n:02}.png")
 
 	spotss = {}
-	normalized = Normalized(images)
-	process_colors(spotss, images, options.signal, normalized)
-
-	images = normalized.get()
+	images = smart(spotss, images, options)
 	draw_flat_images(images, "img-normalized.png")
 
-	process_colors(spotss, images, options.territories)
+	#spotss = {}
+	#normalized = Normalized(images)
+	#process_colors(spotss, images, options.signal, normalized)
+
+	#images = normalized.get()
+	#draw_flat_images(images, "img-normalized.png")
+
+	#process_colors(spotss, images, options.territories)
 
 	draw_flat_channels(images, "img-colors.png", spotss)
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
@@ -46,9 +51,59 @@ def process_colors(spotss, images, colors, normalized=None):
 		cube = detection_filters(images, color_options)
 		this = spotss[color_options.color] = detect_signals(cube, color_options)
 		draw_flat_border(images, "img-b{}.png".format(color_options.color), this)
-		if normalized:
+		if normalized and options.neighborhood_size:
 			neighborhoods = build_neighborhoods(this, images)
 			normalized.add(normalize_neighborhoods(neighborhoods, images))
+
+# --------------------------------------------------
+# Alternative (hopefully) smart processing
+#
+
+def smart(spotss, images, options):
+	images = detect_cells(spotss, images, options)
+	prefill_spotss(spotss, images)
+	for n, cell in enumerate(spotss['red2'].spots):
+		log(n, "...")
+		for color_options in options.signal + [options.color['red']]:
+			cube = select_cube(images, color_options, cell)
+			spots = smart_color(cube, color_options)
+			spotss[color_options.color].spots += spots.spots
+	smart_draw(spotss, images, options)
+	return images
+
+def detect_cells(spotss, images, options):
+	log("Detecting cells...")
+	color_options = options.color['red2']
+	cube = detection_filters(images, color_options)
+	this = spotss['red2'] = detect_signals(cube, color_options)
+	if options.neighborhood_size:
+		neighborhoods = build_neighborhoods(this, images)
+		images.cubes[options.normalize_channel] = normalize_neighborhoods(neighborhoods, images)
+	return images
+
+def prefill_spotss(spotss, images):
+	for color in tuple(options.color):
+		if color not in spotss:
+			cube = images.cubes[options.color[color].channel]
+			spotss[color] = Spots(cube)
+
+def select_cube(images, color_options, cell):
+	src_cube = images.cubes[color_options.channel]
+	cube = np.zeros_like(src_cube)
+	cube[cell.coords] = src_cube[cell.coords]
+	return cube
+
+def smart_color(cube, color_options):
+	cube = cube.astype('float')
+	if color_options.blur:
+		blur, color = color_options.blur, color_options.color
+		cube = Filters(cube, blur, color, False).cube
+	cube = cube.clip(0, 255).astype('uint8')
+	return detect_signals(cube, color_options)
+
+def smart_draw(spotss, images, options):
+	for color in spotss:
+		draw_flat_border(images, "img-b{}.png".format(color), spotss[color])
 
 # --------------------------------------------------
 # Input & preprocessing
@@ -64,6 +119,9 @@ def load_images():
 		with czifile.CziFile(options.czi_images) as czi:
 			images = load_czi_images(czi)
 			print_czi_metadata(czi)
+	elif options.nd2_images:
+		with open(options.nd2_images) as file:
+			images = load_nd2_images(file)
 	return images
 
 def load_czi_images(czi):
@@ -82,6 +140,46 @@ def print_czi_metadata(czi):
 	for coord in "XYZ":
 		scaling, = czi.metadata.findall(".//Scaling" + coord)
 		log(coord, "scaling:", int(float(scaling.text) * 10**9), "nm")
+
+def load_nd2_images(file):
+	nd2 = open_nd2(file)
+	data = [nd2.get_image(n)[1:] for n in range(nd2.Z)]
+	data = (np.array(data) >> 4).astype('uint8')
+	data = data.reshape((nd2.Z, data.shape[1], nd2.H, nd2.W))
+	## XXX: hopefully, contrast is always channel 4 or absent
+	g, b, r = [data[:, n, :, :] for n in range(3)]
+	images = Images()
+	images.from_cubes([r, g, b])
+	print_nd2_metadata(nd2)
+	return images
+
+def open_nd2(file):
+	from sloth.read_nd2 import Nd2File
+	nd2 = Nd2File(file)
+	vars(nd2).update(nd2.attr)
+	nd2.Z = nd2.uiSequenceCount
+	nd2.H = nd2.uiHeight
+	nd2.W = nd2.uiWidth
+	nd2.scalexy = nd2.meta['SLxCalibration']['dCalibration']
+	nd2.scalez = nd2.meta['SLxExperiment']['uLoopPars']['dZStep']
+	return nd2
+
+def print_nd2_metadata(nd2):
+	colors = 'Green', 'Blue', 'Red', '(ignore)',
+	wavelengths = nd2_wavelengths(nd2)
+	for n, (wavelength, color) in enumerate(zip(wavelengths, colors)):
+		log(n, wavelength, 'nm', "=>", color)
+	log('X', "scaling:", int(nd2.scalexy * 10**3), "nm")
+	log('Y', "scaling:", int(nd2.scalexy * 10**3), "nm")
+	log('Z', "scaling:", int(nd2.scalez * 10**3), "nm")
+
+def nd2_wavelengths(nd2):
+	return [
+		(nd2.meta['SLxPictureMetadata']['sPicturePlanes']['sPlane']
+			.get(c, {}).get('pFilterPath', {}).get('m_pFilter', {})
+			.get('', {}).get('m_EmissionSpectrum', {}).get('pPoint', {})
+			.get('Point0', {}).get('dWavelength'))
+			for c in ('a0', 'a1', 'a2', 'a3')]
 
 @logging
 def despeckle_images(images):
@@ -113,25 +211,40 @@ class Detectors(object):
 	def cc(self, level):
 		self.spots.detect_cc(level)
 
+	def percentile(self, percentile):
+		level = np.percentile(self.spots.cube, percentile)
+		self.spots.detect_cc(level)
+
+	def topvoxels(self, voxels):
+		where = self.spots.cube.argpartition(-voxels, axis=None)[-voxels]
+		level = self.spots.cube.flat[where]
+		self.spots.detect_cc(level)
+
 	def spheres(self, n, radius, wipe_radius=None):
 		self.spots.detect_spheres(n, radius, wipe_radius or radius)
 
 class Filters(object):
 
-	def __init__(self, cube, string, color):
+	def __init__(self, cube, string, color, draw=True):
 		self.cube = self.src_cube = cube
+		self.cubes = None
 		self.color = color
+		self.draw = draw
 		for func in string.split(';'):
 			eval('self.' + func)
+		if draw:
+			draw_flat_cubes(self.cubes or [self.cube] * 3,
+				'blur-{}-all.png'.format(self.color))
+			#draw_3D_cubes((cube, blur_cube, max_cube),
+			#	'blur-%s-{n:02}.png' % self.color)
 
 	def peak(self, sigma, side=3):
+		if isinstance(side, int):
+			side = (side, side * 3, side * 3)
 		blur_cube = gaussian_filter(self.cube, sigma)
-		max_cube = maximum_filter(blur_cube, (side, side * 3, side * 3))
+		max_cube = maximum_filter(blur_cube, side)
 		self.cube = (self.cube - blur_cube) * 100 / max_cube
-		draw_flat_cubes([self.cube, blur_cube, max_cube],
-			'blur-{}-all.png'.format(self.color))
-		#draw_3D_cubes((cube, blur_cube, max_cube),
-		#	'blur-%s-{n:02}.png' % self.color)
+		self.cubes = [self.cube, blur_cube, max_cube]
 
 	def peak1(self, sigma=2, sides=(1,99,99)):
 		no_peaks = gaussian_filter(self.cube, sigma)
@@ -177,7 +290,7 @@ def detection_filters(images, options):
 @logging
 def build_neighborhoods(spots, images):
 	size = options.neighborhood_size
-	neighborhoods = spots.ellipsoids((1, size, size))
+	neighborhoods = spots.ellipsoids((size/3, size, size))
 	neighborhoods.assign_cube(images.cubes[options.normalize_channel])
 	return neighborhoods
 
@@ -349,6 +462,7 @@ def parse_options():
 	p = optparse.OptionParser()
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
+	p.add_option("-n", "--nd2-images", help="nd2 file with images")
 	p.add_option("-o", "--out-stats", help="outfile with stats (default: stdout)")
 	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
 	p.add_option("-d", "--out-distances", help="distances outfile (or stdout)")
