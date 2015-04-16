@@ -115,51 +115,68 @@ def smart_draw(spotss, images, options):
 		draw_flat_border(images, "img-b{}.png".format(color), spotss[color])
 
 # --------------------------------------------------
-# Input & preprocessing
+# Input
 #
 
-@logging
 def load_images():
 	if options.images:
-		images = Images(glob.glob(options.images))
-		images.assign_cubes()
+		images = load_glob_images(options.images)
 	elif options.czi_images:
-		import czifile
-		with czifile.CziFile(options.czi_images) as czi:
-			images = load_czi_images(czi)
-			print_czi_metadata(czi)
+		images = load_czi_images(options.czi_images)
 	elif options.nd2_images:
-		with open(options.nd2_images) as file:
-			images = load_nd2_images(file)
+		images = load_nd2_images(options.nd2_images)
+	print_images_metadata(images)
 	return images
 
-def load_czi_images(czi):
-	images = Images()
-	universe = czi.asarray()
-	r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
-	images.from_cubes([r, g, b])
+def print_images_metadata(images):
+	wavelengths = ["{}: {}nm".format(color, int(wavelength))
+		for color, wavelength in zip("RGB", images.wavelengths)]
+	scales = ["{}: {}nm".format(axis, int(scale))
+		for axis, scale in reversed(zip("ZYX", images.scales))]
+	log("Channels:", " ".join(wavelengths))
+	log("Scales:", " ".join(scales))
+
+@logging
+def load_glob_images(filename):
+	images = Images(glob.glob(filename))
+	images.assign_cubes()
+	images.wavelengths = None
+	images.scale = None
 	return images
 
-def print_czi_metadata(czi):
-	colors = 'Red', '(ignore)', 'Green', 'Blue'
+@logging
+def load_czi_images(filename):
+	import czifile
+	with czifile.CziFile(filename) as czi:
+		images = Images()
+		universe = czi.asarray()
+		## XXX: we just hope that contrast is always channel 2... :-/
+		r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
+		images.from_cubes([r, g, b])
+		load_czi_metadata(images, czi)
+		return images
+
+def load_czi_metadata(images, czi):
 	channels = czi.metadata.findall(".//ExcitationWavelength")
-	for n, (channel, color) in enumerate(zip(channels, colors)):
-		wavelength = str(int(float(channel.text))) + "nm"
-		log(n, channel.getparent().get('Name'), wavelength, "=>", color)
-	for coord in "XYZ":
-		scaling, = czi.metadata.findall(".//Scaling" + coord)
-		log(coord, "scaling:", int(float(scaling.text) * 10**9), "nm")
+	r, p, g, b = [float(channel.text) for channel in channels]
+	images.wavelengths = (r, g, b)
+	images.scales = tuple(
+		10**9 * float(czi.metadata.findall(".//Scaling" + coord)[0].text)
+		for coord in "ZYX"
+	)
 
-def load_nd2_images(file):
-	nd2 = open_nd2(file)
-	data = [nd2.get_image(n)[1:] for n in range(nd2.Z)]
-	data = (np.array(data) >> 4).astype('uint8')
-	data = data.reshape((nd2.Z, data.shape[1], nd2.H, nd2.W))
-	## XXX: hopefully, contrast is always channel 4 or absent
-	g, b, r = [data[:, n, :, :] for n in range(3)]
-	images = Images()
-	images.from_cubes([r, g, b])
-	print_nd2_metadata(nd2)
+@logging
+def load_nd2_images(filename):
+	with open(filename) as file:
+		nd2 = open_nd2(file)
+		data = [nd2.get_image(n)[1:] for n in range(nd2.Z)]
+		data = (np.array(data) >> 4).astype('uint8')
+		data = data.reshape((nd2.Z, data.shape[1], nd2.H, nd2.W))
+		## XXX: hopefully, contrast is always channel 4 or absent
+		g, b, r = [data[:, n, :, :] for n in range(3)]
+		images = Images()
+		images.from_cubes([r, g, b])
+		load_nd2_metadata(nd2, images)
 	return images
 
 def open_nd2(file):
@@ -173,14 +190,14 @@ def open_nd2(file):
 	nd2.scalez = nd2.meta['SLxExperiment']['uLoopPars']['dZStep']
 	return nd2
 
-def print_nd2_metadata(nd2):
-	colors = 'Green', 'Blue', 'Red', '(ignore)',
-	wavelengths = nd2_wavelengths(nd2)
-	for n, (wavelength, color) in enumerate(zip(wavelengths, colors)):
-		log(n, wavelength, 'nm', "=>", color)
-	log('X', "scaling:", int(nd2.scalexy * 10**3), "nm")
-	log('Y', "scaling:", int(nd2.scalexy * 10**3), "nm")
-	log('Z', "scaling:", int(nd2.scalez * 10**3), "nm")
+def load_nd2_metadata(nd2, images):
+	g, b, r, _ = nd2_wavelengths(nd2)
+	images.wavelengths = tuple(map(float, (r, g, b)))
+	images.scales = (
+		nd2.scalez * 1000,
+		nd2.scalexy * 1000,
+		nd2.scalexy * 1000
+	)
 
 def nd2_wavelengths(nd2):
 	return [
@@ -189,6 +206,10 @@ def nd2_wavelengths(nd2):
 			.get('', {}).get('m_EmissionSpectrum', {}).get('pPoint', {})
 			.get('Point0', {}).get('dWavelength'))
 			for c in ('a0', 'a1', 'a2', 'a3')]
+
+# --------------------------------------------------
+# Preprocessing
+#
 
 @logging
 def despeckle_images(images):
