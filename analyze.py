@@ -113,7 +113,7 @@ class Spot(object):
 		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
 		return np.count_nonzero(non_null)
 
-	def to_physical(self, volume):
+	def to_physical_volume(self, volume):
 		"""Convert volume in voxels to physical volume in nm^3."""
 		sz, sy, sx = self.spots.images.scales
 		voxel = sx * sy * sz
