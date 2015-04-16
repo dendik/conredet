@@ -13,6 +13,7 @@ options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 draw_colors = ('red2', 'green', 'blue')
+cell_color = 'red2'
 
 def main():
 	global options
@@ -41,9 +42,7 @@ def main():
 
 	draw_flat_channels(images, "img-colors.png", spotss)
 	draw_3D_colors(images, "img-c{n:02}.png", spotss)
-	print_stats(spotss, images)
-	print_spots(spotss)
-	print_distances(spotss)
+	print_results(spotss, images)
 
 def process_colors(spotss, images, colors, normalized=None):
 	for color_options in colors:
@@ -55,6 +54,14 @@ def process_colors(spotss, images, colors, normalized=None):
 			neighborhoods = build_neighborhoods(this, images)
 			normalized.add(normalize_neighborhoods(neighborhoods, images))
 
+@logging
+def print_results(spotss, images):
+	print_signals(spotss)
+	print_pairs(spotss)
+	print_stats(spotss, images)
+	print_spots(spotss)
+	print_distances(spotss)
+
 # --------------------------------------------------
 # Alternative (hopefully) smart processing
 #
@@ -62,9 +69,11 @@ def process_colors(spotss, images, colors, normalized=None):
 def smart(spotss, images, options):
 	images = detect_cells(spotss, images, options)
 	prefill_spotss(spotss, images)
-	for n, cell in enumerate(spotss['red2'].spots):
+	for n, cell in enumerate(spotss[cell_color].spots):
 		log(n, "...")
-		for color_options in options.signal + [options.color['red']]:
+		for color, color_options in options.color.items():
+			if color == cell_color:
+					continue
 			cube = select_cube(images, color_options, cell)
 			spots = smart_color(cube, color_options)
 			spotss[color_options.color].spots += spots.spots
@@ -73,9 +82,9 @@ def smart(spotss, images, options):
 
 def detect_cells(spotss, images, options):
 	log("Detecting cells...")
-	color_options = options.color['red2']
+	color_options = options.color[cell_color]
 	cube = detection_filters(images, color_options)
-	this = spotss['red2'] = detect_signals(cube, color_options)
+	this = spotss[cell_color] = detect_signals(cube, color_options)
 	if options.neighborhood_size:
 		neighborhoods = build_neighborhoods(this, images)
 		images.cubes[options.normalize_channel] = normalize_neighborhoods(neighborhoods, images)
@@ -328,11 +337,54 @@ class Normalized(object):
 # Output
 #
 
+def with_output(function):
+	filename_option = 'out_' + function.func_name.replace("print_", "")
+	filename = lambda: vars(options)[filename_option]
+	def result(*args, **kwargs):
+		if not filename():
+			return
+		backup_stdout = sys.stdout
+		sys.stdout = open(filename(), 'w')
+		function(*args, **kwargs)
+		sys.stdout = backup_stdout
+	return result
+
+@with_output
+@logging
+def print_signals(spotss):
+	print "cell_n", "color", "spot", "x", "y", "z", "size"
+	for cell_n, cell in iter_cells(spotss):
+		for color, spot_n, spot in iter_cell_spots(spotss, cell):
+			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center_of_mass())
+			size = spot.size()
+			print cell_n, color, spot_n, x, y, z, size
+
+@with_output
+@logging
+def print_pairs(spotss):
+	print "cell_n", "color1", "spot1", "color2", "spot2", "distance"
+	for cell_n, cell in iter_cells(spotss):
+		for color1, spot_n1, spot1 in iter_cell_spots(spotss, cell):
+			for color2, spot_n2, spot2 in iter_cell_spots(spotss, cell):
+				if spot1 != spot2:
+					print cell_n, color1, spot_n1, color2, spot_n2,
+					print spot1.distance(spot2)
+
+def iter_cells(spotss):
+	for cell_n, cell in enumerate(spotss[cell_color].spots):
+			yield cell_n, cell
+
+def iter_cell_spots(spotss, cell):
+	for color in spotss:
+		if color == cell_color:
+			continue
+		spots = spotss[color]
+		for spot_n in cell.intersection_ids(spots):
+			yield color, spot_n, spots.spots[spot_n]
+
+@with_output
 @logging
 def print_stats(spotss, images):
-	if options.out_stats:
-		sys.stdout = open(options.out_stats, 'w')
-
 	for color1, color2, size, spots, other in iter_views(spotss):
 		print ""
 		print color1, color2, size
@@ -350,11 +402,9 @@ def iter_views(spotss):
 					other = spotss[other_color]
 					yield color, other_color, size, espots, other
 
+@with_output
 @logging
 def print_spots(spotss):
-	if options.out_spots:
-		sys.stdout = open(options.out_spots, 'w')
-
 	for color in spotss:
 		for other in spotss:
 			if other == color:
@@ -366,11 +416,9 @@ def print_spots(spotss):
 				ids = spot.intersection_ids(other_spots)
 				print n, " ".join(map(str, ids))
 
+@with_output
 @logging
 def print_distances(spotss):
-	if options.out_distances:
-		sys.stdout = open(options.out_distances, 'w')
-
 	for color in ('blue', 'green'):
 		for other in ('red',):
 			if other == color:
@@ -475,9 +523,11 @@ def parse_options():
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-n", "--nd2-images", help="nd2 file with images")
-	p.add_option("-o", "--out-stats", help="outfile with stats (default: stdout)")
-	p.add_option("-s", "--out-spots", help="outfile with spots (default: stdout)")
-	p.add_option("-d", "--out-distances", help="distances outfile (or stdout)")
+	p.add_option("-1", "--out-signals", help="file with per-signal data")
+	p.add_option("-2", "--out-pairs", help="file with per-pair data")
+	p.add_option("-o", "--out-stats", help="obsolete file with stats")
+	p.add_option("-s", "--out-spots", help="obsolete file with spots")
+	p.add_option("-d", "--out-distances", help="obsolete distances outfile")
 	for color in sorted(option_colors):
 		color = "--" + color
 		p.add_option(color + "-role",
