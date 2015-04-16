@@ -2,6 +2,7 @@ import re
 import sys
 import time
 import functools
+import inspect
 
 def log(*args):
 	sys.stderr.write(" ".join(map(str, args)) + "\n")
@@ -19,6 +20,15 @@ def logging(message):
 	else:
 		f, message = message, (message.__name__ + "...")
 		return decorator(f)
+
+def ifverbose(function):
+	stack = inspect.stack()
+	caller_globals = stack[1][0].f_globals
+	@functools.wraps(function)
+	def result(*args, **kwargs):
+		if caller_globals['options'].verbose:
+			return function(*args, **kwargs)
+	return result
 
 def roundint(value):
 	return int(value + 0.5)
