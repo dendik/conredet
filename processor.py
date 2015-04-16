@@ -17,6 +17,7 @@ cell_color = 'red2'
 
 def main():
 	global options
+	global images # see XXX in detect_signals
 	options, args = parse_options()
 	for color in sorted(options.color):
 		log(options.color[color])
@@ -94,7 +95,7 @@ def prefill_spotss(spotss, images):
 	for color in tuple(options.color):
 		if color not in spotss:
 			cube = images.cubes[options.color[color].channel]
-			spotss[color] = Spots(cube)
+			spotss[color] = Spots(cube, images=images)
 
 def select_cube(images, color_options, cell):
 	src_cube = images.cubes[color_options.channel]
@@ -223,13 +224,14 @@ def despeckle_images(images):
 
 @logging
 def detect_signals(cube, options):
-	spots = Detectors(cube, options).spots
+	global images # XXX: the code is too messy to get images any other way
+	spots = Detectors(cube, options, images).spots
 	spots.filter_by_size(options.min_size, options.max_size)
 	return spots
 
 class Detectors(object):
-	def __init__(self, cube, options):
-		self.spots = Spots(cube)
+	def __init__(self, cube, options, images):
+		self.spots = Spots(cube, images=images)
 		self.options = options
 		for func in options.detect.split(';'):
 			eval('self.' + func)
@@ -373,23 +375,28 @@ def with_output(function):
 @with_output
 @logging
 def print_signals(spotss):
-	print "cell_n", "color", "spot", "x", "y", "z", "size"
+	print "cell_n", "color", "spot", "x", "y", "z", "size", "volume"
 	for cell_n, cell in iter_cells(spotss):
 		for color, spot_n, spot in iter_cell_spots(spotss, cell):
 			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center_of_mass())
 			size = spot.size()
-			print cell_n, color, spot_n, x, y, z, size
+			volume = spot.to_physical(size)
+			print cell_n, color, spot_n, x, y, z, size, volume
 
 @with_output
 @logging
 def print_pairs(spotss):
-	print "cell_n", "color1", "spot1", "color2", "spot2", "distance"
+	print "cell_n", "color1", "spot1", "color2", "spot2",
+	print "distance", "physical_distance"
 	for cell_n, cell in iter_cells(spotss):
 		for color1, spot_n1, spot1 in iter_cell_spots(spotss, cell):
 			for color2, spot_n2, spot2 in iter_cell_spots(spotss, cell):
-				if spot1 != spot2:
-					print cell_n, color1, spot_n1, color2, spot_n2,
-					print spot1.distance(spot2)
+				if spot1 == spot2:
+					continue
+				distance = "{:.2f}".format(spot1.distance(spot2))
+				physical_distance = "{:.2f}".format(spot1.physical_distance(spot2))
+				print cell_n, color1, spot_n1, color2, spot_n2,
+				print distance, physical_distance
 
 def iter_cells(spotss):
 	for cell_n, cell in enumerate(spotss[cell_color].spots):

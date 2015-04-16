@@ -113,10 +113,22 @@ class Spot(object):
 		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
 		return np.count_nonzero(non_null)
 
+	def to_physical(self, volume):
+		"""Convert volume in voxels to physical volume in nm^3."""
+		sz, sy, sx = self.spots.images.scales
+		voxel = sx * sy * sz
+		return volume * voxel
+
 	def distance(self, other):
 		"""Return distance between centers of two signals."""
 		c1 = np.array(self.center_of_mass())
 		c2 = np.array(other.center_of_mass())
+		return np.linalg.norm(c1 - c2)
+
+	def physical_distance(self, other):
+		"""Return distance between centers of two signals in nm."""
+		c1 = np.array(self.center_of_mass()) * self.spots.images.scales
+		c2 = np.array(other.center_of_mass()) * other.spots.images.scales
 		return np.linalg.norm(c1 - c2)
 
 	def distance_to_variety(self, spots, max_distance=20, d=1):
@@ -220,11 +232,12 @@ class Cylinder(Ellipsoid):
 
 class Spots(object):
 
-	def __init__(self, cube, colors=None):
+	def __init__(self, cube, colors=None, images=None):
 		if isinstance(cube, Spots):
 			vars(self).update(vars(cube))
 			return
 		self.cube = cube
+		self.images = images
 		self.pixels = set()
 		self.spots = []
 		self.has_colors = False
@@ -302,20 +315,20 @@ class Spots(object):
 
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
-		result = Spots(self.cube)
+		result = Spots(self.cube, images=self.images)
 		result.spots = [spot.expanded(d, spots=result) for spot in self.spots]
 		return result
 
 	def ellipsoids(self, radii=(0,1,1)):
 		"""Return set of spots replaced by ellipsoids with given radii."""
-		result = Spots(self.cube)
+		result = Spots(self.cube, images=self.images)
 		centers = (map(int, spot.center_of_mass()) for spot in self.spots)
 		result.spots = [Ellipsoid(self, center, radii) for center in centers]
 		return result
 
 	def cylinders(self, radii=(0,1,1)):
 		"""Return set of spots replaced by cylinders with given radii."""
-		result = Spots(self.cube)
+		result = Spots(self.cube, images=self.images)
 		centers = (map(int, spot.center_of_mass()) for spot in self.spots)
 		result.spots = [Cylinder(self, center, radii) for center in centers]
 		return result
