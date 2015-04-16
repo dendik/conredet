@@ -7,7 +7,7 @@ from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
 
 from analyze import Images, Spots
-from utils import log, logging, roundint, Re
+from utils import log, logging, ifverbose, roundint, Re
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
@@ -388,10 +388,12 @@ def print_distances(spotss):
 # Images output
 #
 
+@ifverbose
 @logging
 def draw_flat_images(images, filename):
 	images.clone().flattened().save(filename)
 
+@ifverbose
 @logging
 def draw_flat_spots(images, filename, spots, options, blackout=True):
 	images = images.clone()
@@ -402,6 +404,7 @@ def draw_flat_spots(images, filename, spots, options, blackout=True):
 	images.from_cubes()
 	images.flattened().save(filename.format(**vars(options)))
 
+@ifverbose
 @logging
 def draw_flat_colors(images, filename, spots, colors):
 	spots = Spots(spots)
@@ -410,6 +413,7 @@ def draw_flat_colors(images, filename, spots, colors):
 	images = images.clone()
 	spots.draw_flat(images.flattened()).save(filename)
 
+@ifverbose
 @logging
 def draw_flat_channels(images, filename, spotss):
 	spots_by_channels(images, spotss).flattened().save(filename)
@@ -419,6 +423,7 @@ def draw_flat_border(images, filename, spots):
 	spots.assign_color(options.border_color, True)
 	spots.draw_flat_border(images.flattened()).save(filename)
 
+@ifverbose
 @logging
 def draw_flat_cubes(cubes, filename):
 	cubes = [cube.clip(0, 255).astype('uint8') for cube in cubes]
@@ -427,15 +432,18 @@ def draw_flat_cubes(cubes, filename):
 def draw_flat_cube(cube, filename):
 	draw_flat_cubes([cube, cube, cube], filename)
 
+@ifverbose
 @logging
 def draw_3D_cubes(cubes, filename):
 	cubes = [cube.clip(0, 255).astype('uint8') for cube in cubes]
 	Images().from_cubes(cubes).save(filename)
 
+@ifverbose
 @logging
 def draw_3D_images(images, filename):
 	images.save(filename)
 
+@ifverbose
 @logging
 def draw_3D_border(images, filename, spots):
 	images = images.clone()
@@ -444,6 +452,7 @@ def draw_3D_border(images, filename, spots):
 	border.draw_3D(images)
 	images.save(filename)
 
+@ifverbose
 @logging
 def draw_3D_colors(images, filename, spotss):
 	spots_by_channels(images, spotss).save(filename)
@@ -498,6 +507,8 @@ def parse_options():
 		help="Comma-separated list of spot extension sizes to report occupancy on")
 	p.add_option("--border-color", default=(255, 160, 80),
 		help="Color for border, given as r,g,b values in range 0 to 255")
+	p.add_option("--verbose", action="store_true",
+		help="Be more verbose: produce more logging & write images")
 
 	parse_environment_defaults(p)
 	options, args = p.parse_args()
