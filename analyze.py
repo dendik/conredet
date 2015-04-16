@@ -113,7 +113,19 @@ class Spot(object):
 		non_null = spots.spots_cube[self.coords] != spots.spots_cube_null
 		return np.count_nonzero(non_null)
 
+	def distance(self, other):
+		"""Return distance between centers of two signals."""
+		c1 = np.array(self.center_of_mass())
+		c2 = np.array(other.center_of_mass())
+		return np.linalg.norm(c1 - c2)
+
 	def distance_to_variety(self, spots, max_distance=20, d=1):
+		"""Return distance to any spot of the given set.
+
+		If self is within a spot of the given set, return distance to it's border.
+
+		The distance is calculated by growing layers around self with expand.
+		"""
 		spots.assign_spots_cube()
 		spot = self
 		for n in range(max_distance):
@@ -122,6 +134,12 @@ class Spot(object):
 			spot = spot.expanded(d)
 
 	def center_to_variety(self, spots, max_distance=20, d=1):
+		"""Return distance to any spot of the given set.
+
+		If self is within a spot of the given set, return distance to it's border.
+
+		The distance is calculated by fitting ellipsoid within center of mass.
+		"""
 		if not isinstance(d, tuple):
 			d = d, d, d
 		d = np.array(d)
@@ -133,7 +151,12 @@ class Spot(object):
 				return n
 
 class Ellipsoid(Spot):
-	"""Sperical spot."""
+	"""Elliptical spot.
+	
+	The spot is defined by it's center (called navel) and three radii.
+
+	The ellipsoid is always coaligned with the XYZ axes.
+	"""
 
 	def __init__(self, spots, navel, radii):
 		Spot.__init__(self, spots, ())
@@ -420,6 +443,7 @@ class Spots(object):
 		return result.clip(0, 255).astype('uint8')
 
 	def substitute_cube(self, cube):
+		"""Use different cube but keep the detected spots."""
 		return Substitute(self, 'cube', cube)
 
 class Images(object):
@@ -452,6 +476,7 @@ class Images(object):
 		return self
 
 	def from_cubes(self, cubes=None):
+		"""Create image stack for three color cubes."""
 		if cubes:
 			self.cubes = cubes
 		assert all(cube.dtype == "uint8" for cube in self.cubes)
@@ -468,4 +493,5 @@ class Images(object):
 		return self
 
 	def clone(self):
+		"""Create a copy of self."""
 		return Images().from_cubes([cube.copy() for cube in self.cubes])
