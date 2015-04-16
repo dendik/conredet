@@ -12,7 +12,7 @@ from utils import log, logging, roundint, Re
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
-draw_colors = ('red', 'green', 'blue')
+draw_colors = ('red2', 'green', 'blue')
 
 def main():
 	global options
@@ -222,6 +222,9 @@ class Detectors(object):
 
 	def spheres(self, n, radius, wipe_radius=None):
 		self.spots.detect_spheres(n, radius, wipe_radius or radius)
+
+	def cylinders(self, n, radius, wipe_radius=None):
+		self.spots.detect_cylinders(n, radius, wipe_radius or radius)
 
 class Filters(object):
 
@@ -472,7 +475,8 @@ def parse_options():
 			help="Either of: empty, signal, territory, core")
 		p.add_option(color + "-detect", default='cc(120)',
 			help="Detection functions. Default: cc(120)."
-			" Alternatives: cc(level), tight(level, tightness), spheres(N, radius)")
+			" Alternatives: cc(level), tight(level, tightness)"
+			", spheres(N, radius[, wipe]), cylinders(N, radius[, wipe])")
 		p.add_option(color + "-min-size", default=15,
 			type=int, help="Minimal size of spot")
 		p.add_option(color + "-max-size", default=500,

@@ -143,15 +143,18 @@ class Ellipsoid(Spot):
 
 	def with_radii(self, radii):
 		"""Return a copy of self with different `radii`."""
-		return Ellipsoid(self.spots, self.navel, radii)
+		return self.__class__(self.spots, self.navel, radii)
 
 	def _coords(self):
 		"""Calculate coordinates for the ellipsoid"""
-		rz2, ry2, rx2 = [
-			np.linspace(-1, 1, num=int(2*radius)) ** 2
+		z, y, x = [
+			np.linspace(-1, 1, num=int(2*radius))
 			for radius in self.radii
 		]
-		distance_squared = rz2[:, None, None] + ry2[:, None] + rx2
+		x = x[np.newaxis, np.newaxis, :]
+		y = y[np.newaxis, :, np.newaxis]
+		z = z[:, np.newaxis, np.newaxis]
+		distance_squared = x ** 2 + y ** 2 + z ** 2
 		return self._shift(np.where(distance_squared <= 1))
 
 	def _shift(self, coords):
@@ -167,13 +170,30 @@ class Ellipsoid(Spot):
 		"""Optimize the brightness of the whole ellipsoid by moving center."""
 		candidate = self
 		for step in range(iterations):
-			candidate = Ellipsoid(self.spots, candidate.center_of_mass(), self.radii)
+			next_navel = candidate.center_of_mass()
+			if next_navel == candidate.navel:
+					break
+			candidate = self.__class__(self.spots, next_navel, self.radii)
 		self.navel = candidate.navel
 		self.coords = candidate.coords
 
 	def wipe(self):
 		"""Wipe everything under `self`."""
 		self.spots.cube[self.coords] = 0
+
+class Cylinder(Ellipsoid):
+
+	def _coords(self):
+		"""Calculate coordinates for the cylinder"""
+		x = np.linspace(-1, 1, num=int(2*self.radii[-2]))
+		y = np.linspace(-1, 1, num=int(2*self.radii[-1]))[:, np.newaxis]
+		z = np.zeros(shape=(self.spots.cube.shape[0], 1, 1))
+		d = x ** 2 + y ** 2 + z ** 2
+		# assert z-radius and navel.z are zero
+		# in order for _shift to not move the cylinder along z axis
+		self.radii = (0,) + tuple(self.radii[-2:])
+		self.navel = (0,) + tuple(self.navel[-2:])
+		return self._shift(np.where(d <= 1))
 
 class Spots(object):
 
@@ -210,6 +230,19 @@ class Spots(object):
 				sphere.optimize_navel()
 				sphere.with_radii((wipe_radius/3, wipe_radius, wipe_radius)).wipe()
 				spheres.append(sphere)
+			self.spots = spheres
+		return self
+
+	def detect_cylinders(self, n, radius, wipe_radius):
+		"""Detect spots by greedily fitting spheres."""
+		with self.substitute_cube(self.cube.copy()):
+			spheres = []
+			for _ in range(n):
+				navel = np.unravel_index(np.argmax(self.cube), self.cube.shape)
+				cylinder = Cylinder(self, navel, (radius, radius))
+				cylinder.optimize_navel()
+				cylinder.with_radii((wipe_radius, wipe_radius)).wipe()
+				spheres.append(cylinder)
 			self.spots = spheres
 		return self
 
@@ -255,6 +288,13 @@ class Spots(object):
 		result = Spots(self.cube)
 		centers = (map(int, spot.center_of_mass()) for spot in self.spots)
 		result.spots = [Ellipsoid(self, center, radii) for center in centers]
+		return result
+
+	def cylinders(self, radii=(0,1,1)):
+		"""Return set of spots replaced by cylinders with given radii."""
+		result = Spots(self.cube)
+		centers = (map(int, spot.center_of_mass()) for spot in self.spots)
+		result.spots = [Cylinder(self, center, radii) for center in centers]
 		return result
 
 	def __isub__(self, other):
