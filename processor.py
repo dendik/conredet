@@ -13,6 +13,7 @@ options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 draw_colors = ('red2', 'green', 'blue')
+onion_colors = ('red',)
 cell_color = 'red2'
 
 def main():
@@ -380,14 +381,14 @@ def print_signals(spotss):
 		for color, spot_n, spot in iter_cell_spots(spotss, cell):
 			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center_of_mass())
 			size = spot.size()
-			volume = spot.to_physical(size)
+			volume = spot.to_physical_volume(size)
 			print cell_n, color, spot_n, x, y, z, size, volume
 
 @with_output
 @logging
 def print_pairs(spotss):
 	print "cell_n", "color1", "spot1", "color2", "spot2",
-	print "distance", "physical_distance"
+	print "distance", "physical_distance", "onion_distance"
 	for cell_n, cell in iter_cells(spotss):
 		for color1, spot_n1, spot1 in iter_cell_spots(spotss, cell):
 			for color2, spot_n2, spot2 in iter_cell_spots(spotss, cell):
@@ -396,7 +397,17 @@ def print_pairs(spotss):
 				distance = "{:.2f}".format(spot1.distance(spot2))
 				physical_distance = "{:.2f}".format(spot1.physical_distance(spot2))
 				print cell_n, color1, spot_n1, color2, spot_n2,
-				print distance, physical_distance
+				print distance, physical_distance, onion_distance(color1, spot1, spotss[color2])
+
+def onion_distance(color1, spot1, spots2):
+	if color1 not in onion_colors:
+		return "-"
+	onion_distance = spot1.distance_to_variety(spots2, d=(0, 1, 1))
+	if not onion_distance:
+		return "-1"
+	# scale properly
+	onion_distance *= spot1.spots.images.scales[-1]
+	return "{:.2f}".format(onion_distance)
 
 def iter_cells(spotss):
 	for cell_n, cell in enumerate(spotss[cell_color].spots):
