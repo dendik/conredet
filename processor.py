@@ -205,7 +205,7 @@ def nd2_wavelengths(nd2):
 	return [
 		(nd2.meta['SLxPictureMetadata']['sPicturePlanes']['sPlane']
 			.get(c, {}).get('pFilterPath', {}).get('m_pFilter', {})
-			.get('', {}).get('m_EmissionSpectrum', {}).get('pPoint', {})
+			.get('', {}).get('m_ExcitationSpectrum', {}).get('pPoint', {})
 			.get('Point0', {}).get('dWavelength'))
 			for c in ('a0', 'a1', 'a2', 'a3')]
 
