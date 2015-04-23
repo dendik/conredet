@@ -7,7 +7,7 @@ from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
 
 from analyze import Images, Spots
-from utils import log, logging, ifverbose, roundint, Re
+from utils import log, logging, ifverbose, roundint, Re, dict_path
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
@@ -188,8 +188,8 @@ def open_nd2(file):
 	nd2.Z = nd2.uiSequenceCount
 	nd2.H = nd2.uiHeight
 	nd2.W = nd2.uiWidth
-	nd2.scalexy = nd2.meta['SLxCalibration']['dCalibration']
-	nd2.scalez = nd2.meta['SLxExperiment']['uLoopPars']['dZStep']
+	nd2.scalexy = dict_path(nd2.meta, 'SLxCalibration/dCalibration')
+	nd2.scalez = dict_path(nd2.meta, 'SLxExperiment/uLoopPars/dZStep')
 	return nd2
 
 def load_nd2_metadata(nd2, images):
@@ -202,12 +202,12 @@ def load_nd2_metadata(nd2, images):
 	)
 
 def nd2_wavelengths(nd2):
-	return [
-		(nd2.meta['SLxPictureMetadata']['sPicturePlanes']['sPlane']
-			.get(c, {}).get('pFilterPath', {}).get('m_pFilter', {})
-			.get('', {}).get('m_ExcitationSpectrum', {}).get('pPoint', {})
-			.get('Point0', {}).get('dWavelength'))
-			for c in ('a0', 'a1', 'a2', 'a3')]
+	path = (
+		'SLxPictureMetadata/sPicturePlanes/sPlane/{}/pFilterPath'
+		'/m_pFilter//m_ExcitationSpectrum/pPoint/Point0/dWavelength'
+	)
+	return [dict_path(plane, path.format(c))
+		for c in ('a0', 'a1', 'a2', 'a3')]
 
 # --------------------------------------------------
 # Preprocessing

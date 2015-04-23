@@ -92,3 +92,20 @@ def find_components(edges):
 				neighbors += graph.pop(vertex)
 		components.append(component)
 	return components
+
+def dict_path(dict, path, default=None):
+	"""Extract element from nested dictionaries.
+
+	Path is either a list of elements or a '/'-separated string.
+
+	Adjacent separaters are treated as a '' element in path.
+
+	Return `default` (or None) if path is not found.
+	"""
+	if isinstance(path, str):
+		path = path.split('/')
+	if tuple(path) == ():
+		return dict
+	if path[0] not in dict:
+		return default
+	return dict_path(dict[path[0]], path[1:], default)
