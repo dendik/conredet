@@ -1,5 +1,7 @@
 syntax: glob
 
+static/jquery.js
+
 *.pyc
 sloth/
 

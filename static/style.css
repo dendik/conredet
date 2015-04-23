@@ -1,0 +1,53 @@
+#main {
+	margin-left: 3em;
+	max-width: 600px;
+}
+
+nav h2 {
+	margin-top: 0px;
+}
+
+nav h1 {
+	margin-bottom: 0px;
+}
+
+nav {
+	text-align: right;
+}
+
+h1 {
+	font-size: 20pt;
+}
+
+h2 {
+	font-size: 12pt;
+}
+
+label, input, div.filename {
+	font-size: 12pt;
+}
+
+div.input input, div.input div.filename {
+	font-style: italic;
+	margin-left: 1em;
+}
+
+input {
+	border: none;
+}
+
+input, div.filename {
+	display: inline;
+}
+
+input.button {
+	display: inline;
+	border-radius: 1ex;
+}
+
+a.advanced {
+	display: block;
+	font-size: small;
+	text-decoration: none;
+	margin: 4ex 0ex;
+}
