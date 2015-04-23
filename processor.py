@@ -206,7 +206,7 @@ def nd2_wavelengths(nd2):
 		'SLxPictureMetadata/sPicturePlanes/sPlane/{}/pFilterPath'
 		'/m_pFilter//m_ExcitationSpectrum/pPoint/Point0/dWavelength'
 	)
-	return [dict_path(plane, path.format(c))
+	return [dict_path(nd2.meta, path.format(c))
 		for c in ('a0', 'a1', 'a2', 'a3')]
 
 # --------------------------------------------------
@@ -557,7 +557,7 @@ def spots_by_channels(images, spotss):
 # Option parsing
 #
 
-def parse_options():
+def option_parser():
 	p = optparse.OptionParser()
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
@@ -600,6 +600,10 @@ def parse_options():
 		help="Be more verbose: produce more logging & write images")
 
 	parse_environment_defaults(p)
+	return p
+
+def parse_options():
+	p = option_parser()
 	options, args = p.parse_args()
 
 	if (options.neighborhood_stretch_quantiles is None

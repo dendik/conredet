@@ -64,10 +64,10 @@
 	<h2>Advanced options</h2>
 	<p>You should only change these after considerable pondering</p>
 
-	{% for option, help, value in options %}
+	{% for option in options %}
 		<div class="input">
-			<label>{{help}}</label>
-			<input name="{{option}}" value="{{value}}">
+			<label>{{option.dest}}, {{option.help}}</label>
+			<input name="{{option.dest}}" value="{{option.default}}">
 		</div>
 	{% endfor %}
 
