@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block head %}
+	{% if not job.done() %}
+		<meta http-equiv="refresh"
+			content="10; url={{url_for('results', id=job.id)}}">
+	{% endif %}
+{% endblock %}
+
+{% block main %}
+	{% if job.done() %}
+		<h2>Job results</h2>
+		<ul>
+			{% for filename in job.results() %}
+				<li>
+					<a href="{{url_for('results', id=job.id, filename=filename)}}">
+						{{filename}}
+					</a>
+				</li>
+			{% endfor %}
+		</ul>
+	{% else %}
+		<h2>Job processing, please wait</h2>
+		<p>The page will refresh itself when the job is done.</p>
+	{% endif %}
+{% endblock %}

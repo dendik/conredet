@@ -7,10 +7,11 @@
 		action="{{url_for('setup')}}"
 		enctype='multipart/form-data'
 		method='post'>
+	<input type="hidden" name="id" value="{{job.id}}">
 
 	<div class="input">
 		<label>Current filename:</label>
-		<div class="filename">"{{filename}}"</div>
+		<div class="filename">"{{job.image_filename}}"</div>
 	</div>
 	<div class="input">
 		<label for='image'>Change file:</label>
@@ -22,8 +23,10 @@
 </form>
 
 <form
+		class="basic"
 		action="{{url_for('setup')}}"
 		method="post">
+	<input type="hidden" name="id" value="{{job.id}}">
 
 	<h2>Basic options</h2>
 	<p>You will most likely need to change these, but it may make sense to make
@@ -43,13 +46,13 @@
 	</div>
 
 	{% for color in ("red", "green", "blue") %}
-	<div class="input">
-		<label>Expected of voxels in {{color}} signal</label>
-		<input name="{{color}}_volume" value="200">
-	</div>
+		<div class="input">
+			<label>Expected of voxels in {{color}} signal</label>
+			<input name="{{color}}_volume" value="200">
+		</div>
 	{% endfor %}
 
-	<input class="button" type="submit" name="set" value="Set">
+	<input class="button" type="submit" name="basic" value="Set">
 	<input class="button" type="submit" name="start" value="Start">
 </form>
 
@@ -60,18 +63,20 @@
 		class="advanced"
 		action="{{url_for('setup')}}"
 		method="post">
+	<input type="hidden" name="id" value="{{job.id}}">
 
 	<h2>Advanced options</h2>
 	<p>You should only change these after considerable pondering</p>
+	<p>It is best to not use basic settings after you've set the advanced ones.</p>
 
-	{% for option in options %}
+	{% for option in job.options %}
 		<div class="input">
-			<label>{{option.dest}}, {{option.help}}</label>
-			<input name="{{option.dest}}" value="{{option.default}}">
+			<label><em>{{option}}</em>. {{job.help[option]}}</label>
+			<input name="{{option}}" value="{{job.options[option]}}">
 		</div>
 	{% endfor %}
 
-	<input class="button" type="submit" name="set" value="Set">
+	<input class="button" type="submit" name="advanced" value="Set">
 	<input class="button" type="submit" name="start" value="Start">
 </form>
 {% endblock %}
