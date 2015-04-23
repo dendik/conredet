@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h2>Start a new job</h2>
+<form
+		action="{{url_for('setup')}}"
+		enctype='multipart/form-data'
+		method='post'>
+	<div class="input">
+		<label>Your image, please:</label>
+		<input type="file" name='image'>
+	</div>
+	<input type="submit" name='go' value='OK'>
+</form>
+{% endblock %}

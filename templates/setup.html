@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h2>Configure your job</h2>
+
+<form
+		action="{{url_for('setup')}}"
+		enctype='multipart/form-data'
+		method='post'>
+
+	<div class="input">
+		<label>Current filename:</label>
+		<div class="filename">"{{filename}}"</div>
+	</div>
+	<div class="input">
+		<label for='image'>Change file:</label>
+		<input type="file" name='image'>
+	</div>
+
+	<input class="button" type="submit" name='go' value='Upload'>
+	<input class="button" type="submit" name="start" value="Start">
+</form>
+
+<form
+		action="{{url_for('setup')}}"
+		method="post">
+
+	<h2>Basic options</h2>
+	<p>You will most likely need to change these, but it may make sense to make
+	the first run with the defaults.</p>
+
+	<div class="input">
+		<label>Expected number of cells</label>
+		<input name="n_cells" value="150">
+	</div>
+	<div class="input">
+		<label>Expected cell radius in pixels</label>
+		<input name="cell_radius" value="30">
+	</div>
+	<div class="input">
+		<label>Cell channel</label>
+		<input name="cell_channel" value="red">
+	</div>
+
+	{% for color in ("red", "green", "blue") %}
+	<div class="input">
+		<label>Expected of voxels in {{color}} signal</label>
+		<input name="{{color}}_volume" value="200">
+	</div>
+	{% endfor %}
+
+	<input class="button" type="submit" name="set" value="Set">
+	<input class="button" type="submit" name="start" value="Start">
+</form>
+
+<a style="display: none" class="advanced"
+	href="#">Toggle advanced options</a>
+
+<form
+		class="advanced"
+		action="{{url_for('setup')}}"
+		method="post">
+
+	<h2>Advanced options</h2>
+	<p>You should only change these after considerable pondering</p>
+
+	{% for option, help, value in options %}
+		<div class="input">
+			<label>{{help}}</label>
+			<input name="{{option}}" value="{{value}}">
+		</div>
+	{% endfor %}
+
+	<input class="button" type="submit" name="set" value="Set">
+	<input class="button" type="submit" name="start" value="Start">
+</form>
+{% endblock %}
