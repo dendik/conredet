@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, send_file
 from wui_helpers import ConfigObject
+from wui_job import Job
 
 class config(object):
 	SESSIONS_DIR = 'sessions'
@@ -15,7 +16,7 @@ def index():
 
 @app.route("/setup", methods=["POST"])
 def setup():
-	job = Job(request.values.get('id'))
+	job = Job(request.values.get('id'), config=app.cfg)
 	if 'image' in request.files:
 		job.set_image(request.files['image'])
 	if 'basic' in request.values:
@@ -37,6 +38,6 @@ def results(id, filename=None):
 	return render_template("results.html", job=job)
 
 if __name__ == "__main__":
-	app.run(debug=True)
+	app.run(debug=True, host='0.0.0.0')
 
 # vim: set noet:
