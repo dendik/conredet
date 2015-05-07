@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block head %}
-	{% if not job.done() %}
+	{% if not job.is_done() %}
 		<meta http-equiv="refresh"
 			content="10; url={{url_for('results', id=job.id)}}">
 	{% endif %}
 {% endblock %}
 
 {% block main %}
-	{% if job.done() %}
+	{% if job.is_done() %}
 		<h2>Job results</h2>
 		<ul>
 			{% for filename in job.results() %}

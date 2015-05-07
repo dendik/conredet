@@ -69,7 +69,7 @@
 	<p>You should only change these after considerable pondering</p>
 	<p>It is best to not use basic settings after you've set the advanced ones.</p>
 
-	{% for option in job.options %}
+	{% for option in job.options | sort %}
 		<div class="input">
 			<label><em>{{option}}</em>. {{job.help[option]}}</label>
 			<input name="{{option}}" value="{{job.options[option]}}">

@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, send_file
+from flask import redirect, url_for
 from wui_helpers import ConfigObject
 from wui_job import Job
 
 class config(object):
-	SESSIONS_DIR = 'sessions'
+	JOB_PREFIX = 'jobs'
 
 app = Flask(__name__)
 app.cfg = ConfigObject(app)
@@ -16,25 +17,25 @@ def index():
 
 @app.route("/setup", methods=["POST"])
 def setup():
-	job = Job(request.values.get('id'), config=app.cfg)
+	job = Job('client', request.values.get('id'), config=app.config)
 	if 'image' in request.files:
 		job.set_image(request.files['image'])
 	if 'basic' in request.values:
-		job.set_basic(request.values)
+		job.set_basic(request.values.to_dict())
 	if 'advanced' in request.values:
-		job.set(request.values)
+		job.set(request.values.to_dict())
 	if 'start' in request.values:
 		job.start()
-		return render_template("results.html", job=job)
+		return redirect(url_for('results', id=job.id))
 	return render_template("setup.html", job=job)
 
 @app.route("/results/<id>")
 @app.route("/results/<id>/<filename>")
 def results(id, filename=None):
-	job = Job(id)
+	job = Job('client', id, config=app.config)
 	if filename:
-		file = job.results[filename]
-		return send_file(file, filename=filename, as_attachment=True)
+		path = job.results()[filename]
+		return send_file(path, filename=filename, as_attachment=True)
 	return render_template("results.html", job=job)
 
 if __name__ == "__main__":

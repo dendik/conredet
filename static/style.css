@@ -34,6 +34,7 @@ div.input input, div.input div.filename {
 
 input {
 	border: none;
+	border-bottom: solid thin black;
 }
 
 input, div.filename {

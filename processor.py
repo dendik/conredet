@@ -20,6 +20,10 @@ def main():
 	global options
 	global images # see XXX in detect_signals
 	options, args = parse_options()
+	start(options)
+
+def start(options):
+	print vars(options)
 	for color in sorted(options.color):
 		log(options.color[color])
 	images = load_images()
