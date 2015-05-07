@@ -32,23 +32,11 @@
 	<p>You will most likely need to change these, but it may make sense to make
 	the first run with the defaults.</p>
 
-	<div class="input">
-		<label>Expected number of cells</label>
-		<input name="n_cells" value="150">
-	</div>
-	<div class="input">
-		<label>Expected cell radius in pixels</label>
-		<input name="cell_radius" value="30">
-	</div>
-	<div class="input">
-		<label>Cell channel</label>
-		<input name="cell_channel" value="red">
-	</div>
-
-	{% for color in ("red", "green", "blue") %}
+	{% for option in ['n_cells', 'cell_radius', 'cell_channel',
+		'red_volume', 'green_volume', 'blue_volume'] %}
 		<div class="input">
-			<label>Expected of voxels in {{color}} signal</label>
-			<input name="{{color}}_volume" value="200">
+			<label for="{{option}}">{{job.help[option]}}</label>
+			<input name="{{option}}" value="{{job.options[option]}}">
 		</div>
 	{% endfor %}
 

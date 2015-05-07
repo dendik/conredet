@@ -16,6 +16,18 @@ import wui_helpers
 wipe_multiplier = 1.2
 worker_sleep = 10 # seconds between job attempts
 
+default_basic_options = dict(
+	n_cells=150, cell_radius=30, cell_channel='red',
+	red_volume=200, green_volume=200, blue_volume=200)
+basic_help = dict(
+	n_cells = "Expected number of cells",
+	cell_radius = "Expected cell radius in pixels",
+	cell_channel = "Cell channel",
+	red_volume = "Expected of voxels in red signal",
+	green_volume = "Expected of voxels in green signal",
+	blue_volume = "Expected of voxels in blue signal",
+)
+
 outfile_options = ('out_signals', 'out_pairs')
 options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
 	'out_stats', 'out_spots', 'out_distances') + outfile_options
@@ -60,8 +72,10 @@ class Job(object):
 		"""Create a new empty job with unique id."""
 		self.id = str(uuid4())
 		self.state = 'new'
-		self.options = {} # option_name -> option_value
 		self.help = {} # option_name -> help text
+		self.help.update(basic_help)
+		self.options = {} # option_name -> option_value
+		self.options.update(default_basic_options)
 		self._set_default_options()
 		os.mkdir(self._filename())
 		self.save()
@@ -126,6 +140,16 @@ class Job(object):
 		Since options come from user and will be pickled, take extra care
 		to sanitize them.
 		"""
+		for option in list(options):
+			if option not in default_basic_options:
+				del options[option]
+				continue
+			if option == 'cell_channel':
+				assert options[option] in known_colors
+			else:
+				options[option] = int(options[option])
+		self.options.update(options)
+
 		for color in known_colors:
 			volume = options[color + '_volume']
 			self.options[color + '_detect'] = 'topvoxels({})'.format(volume)
