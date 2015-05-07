@@ -1,9 +1,29 @@
+"""Very stupid job processing.
+
+This currently uses pickle to store data & options, folders for larger data
+files, and sleep for synchronization.
+
+May switch to Redis someday.
+"""
+import os
 from uuid import uuid4
 import pickle
+import time
+import optparse
 import processor
+import wui_helpers
 
+wipe_multiplier = 1.2
+worker_sleep = 10 # seconds between job attempts
+
+outfile_options = ('out_signals', 'out_pairs')
 options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
-	'out_signals', 'out_pairs', 'out_stats', 'out_spots', 'out_distances')
+	'out_stats', 'out_spots', 'out_distances') + outfile_options
+
+known_extensions = ('nd2', 'czi')
+known_colors = ('red', 'green', 'blue')
+known_roles = ('client', 'worker')
+job_filename = 'job.pickle'
 
 class Job(object):
 	"""Image processing job.
@@ -19,12 +39,17 @@ class Job(object):
 	Attributes:
 
 		* `id`: uniq id, also used as name of job folder
+		* `state`: either of 'new', 'started', 'done'
 		* `options`: options as passed to image processor
-		* `convert`: function to convert string options to respective datatypes
-		* `config.job_prefix`: folder for job folders
+		* `help`: help messages for the options
+		* `config`: application configuration dictionary, of it we use:
+
+			* JOB_PREFIX: path to folder with job folders
 	"""
 
-	def __init__(self, id=None, config=None):
+	def __init__(self, role, id=None, config=None):
+		assert role in known_roles
+		self.role = role
 		self.config = config
 		if id is None:
 			self.create()
@@ -34,39 +59,83 @@ class Job(object):
 	def create(self):
 		"""Create a new empty job with unique id."""
 		self.id = str(uuid4())
-		self.results = {} # filename -> file object / stringio
+		self.state = 'new'
 		self.options = {} # option_name -> option_value
-		self.convert = {} # option_name -> f(name, value_str) -> option_value
+		self.help = {} # option_name -> help text
 		self._set_default_options()
+		os.mkdir(self._filename())
 		self.save()
 
 	def load(self, id):
 		"""Load job with a given id from storage."""
-		pass
+		self.id = id
+		role = self.role
+		with open(self._filename(job_filename), 'rb') as fd:
+			vars(self).update(vars(pickle.load(fd)))
+		self.role = role
 
-	def save(self):
-		"""Save a job to storage."""
-		pass
+	def save(self, set_state=None):
+		"""Save a job to storage.
+		
+		To avoid races:
+
+			* Client only may save job until started.
+			* Client may set started flag upon saving (only once, obviously).
+			* Worker only may save job between started and done.
+			* Worker may set done flag upon saving (only once, obviously).
+		"""
+		if self.role == 'client':
+			assert self.state == 'new'
+		if self.role == 'worker':
+			assert self.state == 'started'
+		if set_state:
+			self.state = set_state
+		with open(self._filename(job_filename), 'wb') as fd:
+			pickle.dump(self, fd)
+
+	def _filename(self, file=None):
+		"""Return filename for either job folder or a file in job folder."""
+		parts = [self.config['JOB_PREFIX'], self.id]
+		if file:
+			parts.append(file)
+		return os.path.join(*parts)
 
 	def set_image(self, file):
-		"""Set input image.
+		"""Set input image. Remove any previously uploaded image files.
 
 		`file`: file upload object from flask.
+
+		`file.filename` comes from user. Only use it to select between known
+		file extensions.
 		"""
-		pass
-		self.image_filename = file.filename
-		file.save(...)
+		for extension in known_extensions:
+			option = extension + '_images'
+			filename = self._filename('input.' + extension)
+			if self.options.get(option):
+				self.options[option] = None
+				os.remove(filename)
+			if file.filename.endswith('.' + extension):
+				self.options[option] = filename
+				file.save(filename)
+				self.image_filename = file.filename # for ui goodness
 		self.save()
-		pass
 
 	def set_basic(self, options):
-		"""Set basic options by compiling them to processor values."""
-		for color in ('red', 'green', 'blue'):
+		"""Set basic options by compiling them to processor values.
+		
+		Since options come from user and will be pickled, take extra care
+		to sanitize them.
+		"""
+		for color in known_colors:
 			volume = options[color + '_volume']
 			self.options[color + '_detect'] = 'topvoxels({})'.format(volume)
 			self.options.pop(color + '2_detect', None)
+			self.options[color + '_role'] = 'signal'
 		color = options['cell_channel']
-		options['wipe_radius'] = int(1.2 * int(options['cell_radius']))
+		self.options[color + '_role'] = 'territory'
+		self.options[color + '2_role'] = 'core'
+		assert color in known_colors
+		options['wipe_radius'] = int(wipe_multiplier * int(options['cell_radius']))
 		self.options[color + '2_detect'] = (
 			'cylinders(n={n_cells}, radius={cell_radius}, wipe_radius={wipe_radius})'
 			.format(**options)
@@ -74,24 +143,73 @@ class Job(object):
 		self.save()
 
 	def set(self, options):
-		"""Update options from a dictionary. Convert values from strings."""
+		"""Update options from a dictionary. Convert values from strings.
+		
+		`options` come from user. Sanitize it thoroughly.
+		"""
+		# XXX does convert from optparse suffy as sanitizer?
 		for var in options:
-			if options[var] = 'None':
+			if options[var] == 'None':
 				options[var] = None
-			if var in self.convert:
-				value = self.convert[var](var, options[var])
-			self.options[var] = value
+			if var in options_blacklist:
+				continue
+			self.options[var] = self._convert(var, options[var])
 		self.save()
+
+	def _convert(self, option_name, value):
+		"""Use optionparser's convert to convert an option."""
+		# XXX isn't this a shitty sanitizer?
+		parser = processor.option_parser()
+		for option in parser.option_list:
+			if option.dest == option_name:
+				convert = option.convert_value
+				return convert(option_name, value)
+		return str(value)
 
 	def start(self):
 		"""Signal job to be ready for processing."""
-		pass
+		self._set_path_options()
+		self.save(set_state='started')
 
 	def is_done(self):
 		"""Tell if job finished."""
-		pass # return True / False
+		return self.state == 'done'
 
-	def _set_default_options():
+	def run(self):
+		"""Do the job."""
+		with wui_helpers.RedirectStd(self._filename('log.txt')):
+			options = wui_helpers.Struct()
+			vars(options).update(self.options)
+			print 'before', [(o,vars(options)[o]) for o in sorted(vars(options))]
+			processor.parse_tuple_options(options)
+			print 'tuple', [(o,vars(options)[o]) for o in sorted(vars(options))]
+			processor.split_color_options(options)
+			print 'split', [(o,vars(options)[o]) for o in sorted(vars(options))]
+			processor.parse_color_list_options(options)
+			print 'list', [(o,vars(options)[o]) for o in sorted(vars(options))]
+			processor.options = options
+			processor.start(options)
+			print 'after', [(o,vars(options)[o]) for o in sorted(vars(options))]
+
+	def results(self):
+		"""Return a dictionary of filenames of all downloadable file objects.
+		
+		key: filename, value: path.
+		"""
+		results = {}
+		for filename in os.listdit(self._filename()):
+			if filename.endswith('.pickle'):
+				continue
+			results[filename] = self._filename(filename)
+		return results
+
+	def _set_path_options(self):
+		"""Set options related to paths."""
+		for option in outfile_options:
+			filename = option.split('_')[-1] + '.csv'
+			self.options[option] = self._filename(filename)
+
+	def _set_default_options(self):
 		"""Fill in self.options from defaults used by processor."""
 		parser = processor.option_parser()
 		for option in parser.option_list:
@@ -100,29 +218,31 @@ class Job(object):
 			if option.dest in options_blacklist:
 				continue
 			self.options[option.dest] = parser.defaults[option.dest]
-			self.convert[option.dest] = option.convert_value
-		return options
+			self.help[option.dest] = option.help
 
+def worker(config):
+	"""Very stupid job processing without redis."""
+	while True:
+		print "Sleeping..."
+		time.sleep(worker_sleep)
+		for id in os.listdir(config['JOB_PREFIX']):
+			job = Job('worker', id, config=config)
+			if job.state == 'started':
+				print "Processing", job.id, "..."
+				#try:
+				job.run()
+				#except Exception, e:
+				#	print e
+				#	job.error = e
+				#	job.save(set_state='error')
+				#else:
+				job.save(set_state='done')
+				print "It is now", job.state
 
-#from uuid import uuid4
-#
-#class Session(object):
-#	def __init__(self, app, redis, key=None):
-#		self.key = key or str(uuid4())
-#		self.cfg = app.cfg
-#		self.redis = redis
-#
-#	def set(self, key, value):
-#		self.redis.hset(self.key, key, value)
-#
-#	def get(self, key):
-#		return self.redis.hget(self.key, key)
-#
-#	def start(self):
-#		self.redis.rpush(self.cfg.queue_key, self.key)
-#
-#def worker(redis, queue_key):
-#	while True:
-#		args = redis.blpop(queue_key)
+if __name__ == "__main__":
+	parser = optparse.OptionParser()
+	parser.add_option('-j', '--job-prefix', help='Path to job folders')
+	options, args = parser.parse_args()
+	worker(dict(JOB_PREFIX=options.job_prefix))
 
 # vim: set noet:
