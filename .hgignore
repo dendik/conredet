@@ -6,5 +6,6 @@ static/jquery.js
 sloth/
 
 # Temoprary & test stuff
+jobs/
 ?
 ?.*
