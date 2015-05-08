@@ -35,7 +35,7 @@ def results(id, filename=None):
 	job = Job('client', id, config=app.config)
 	if filename:
 		path = job.results()[filename]
-		return send_file(path, filename=filename, as_attachment=True)
+		return send_file(path, attachment_filename=filename, as_attachment=True)
 	return render_template("results.html", job=job)
 
 if __name__ == "__main__":

@@ -234,7 +234,7 @@ class Job(object):
 		key: filename, value: path.
 		"""
 		results = {}
-		for filename in os.listdit(self._filename()):
+		for filename in os.listdir(self._filename()):
 			if filename.endswith('.pickle'):
 				continue
 			results[filename] = self._filename(filename)
