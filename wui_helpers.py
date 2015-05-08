@@ -1,4 +1,5 @@
 import sys
+import os
 
 class ConfigObject(object):
   def __init__(self, app):
@@ -25,3 +26,12 @@ class RedirectStd(object):
     self.fd.close()
     sys.stdout = self.stdout
     sys.stderr = self.stderr
+
+class Chdir(object):
+  def __init__(self, path):
+    self.path = path
+  def __enter__(self):
+    self.cwd = os.getcwd()
+    os.chdir(self.path)
+  def __exit__(self, exc_type, exc_value, traceback):
+    os.chdir(self.cwd)

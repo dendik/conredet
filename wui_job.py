@@ -11,7 +11,7 @@ import pickle
 import time
 import optparse
 import processor
-import wui_helpers
+from wui_helpers import RedirectStd, Chdir, Struct
 
 wipe_multiplier = 1.2
 worker_sleep = 10 # seconds between job attempts
@@ -124,13 +124,13 @@ class Job(object):
 		"""
 		for extension in known_extensions:
 			option = extension + '_images'
-			filename = self._filename('input.' + extension)
+			filename = 'input.' + extension
 			if self.options.get(option):
 				self.options[option] = None
-				os.remove(filename)
+				os.remove(self._filename(filename))
 			if file.filename.endswith('.' + extension):
-				self.options[option] = filename
-				file.save(filename)
+				self.options[option] = filename # this will run with chdir
+				file.save(self._filename(filename))
 				self.image_filename = file.filename # for ui goodness
 		self.save()
 
@@ -177,6 +177,8 @@ class Job(object):
 				options[var] = None
 			if var in options_blacklist:
 				continue
+			if var not in self.options:
+				continue
 			self.options[var] = self._convert(var, options[var])
 		self.save()
 
@@ -200,20 +202,31 @@ class Job(object):
 		return self.state == 'done'
 
 	def run(self):
-		"""Do the job."""
-		with wui_helpers.RedirectStd(self._filename('log.txt')):
-			options = wui_helpers.Struct()
-			vars(options).update(self.options)
-			print 'before', [(o,vars(options)[o]) for o in sorted(vars(options))]
-			processor.parse_tuple_options(options)
-			print 'tuple', [(o,vars(options)[o]) for o in sorted(vars(options))]
-			processor.split_color_options(options)
-			print 'split', [(o,vars(options)[o]) for o in sorted(vars(options))]
-			processor.parse_color_list_options(options)
-			print 'list', [(o,vars(options)[o]) for o in sorted(vars(options))]
-			processor.options = options
-			processor.start(options)
-			print 'after', [(o,vars(options)[o]) for o in sorted(vars(options))]
+		"""Do the job. Set state to done at the end."""
+		# This is a wrapper around self._run_processor()
+		# It forks, redirects stdio, changes directory to job
+		# (XXX chdir(job) is a hack)
+		print "Starting job", self.id
+		with RedirectStd(self._filename('log.txt')):
+			try:
+				with Chdir(self._filename()):
+					self._run_processor()
+			except Exception, e:
+				print "Job failed:", e
+				self.error = e
+				self.save(set_state='error')
+			else:
+				self.save(set_state='done')
+
+	def _run_processor(self):
+		"""Run the required function from processor to run the jub."""
+		options = Struct()
+		vars(options).update(self.options)
+		processor.parse_tuple_options(options)
+		processor.split_color_options(options)
+		processor.parse_color_list_options(options)
+		processor.options = options
+		processor.start()
 
 	def results(self):
 		"""Return a dictionary of filenames of all downloadable file objects.
@@ -231,7 +244,7 @@ class Job(object):
 		"""Set options related to paths."""
 		for option in outfile_options:
 			filename = option.split('_')[-1] + '.csv'
-			self.options[option] = self._filename(filename)
+			self.options[option] = filename
 
 	def _set_default_options(self):
 		"""Fill in self.options from defaults used by processor."""
@@ -240,6 +253,8 @@ class Job(object):
 			if not option.dest:
 				continue
 			if option.dest in options_blacklist:
+				self.options[option.dest] = None
+				self.help[option.dest] = None
 				continue
 			self.options[option.dest] = parser.defaults[option.dest]
 			self.help[option.dest] = option.help
@@ -250,18 +265,15 @@ def worker(config):
 		print "Sleeping..."
 		time.sleep(worker_sleep)
 		for id in os.listdir(config['JOB_PREFIX']):
-			job = Job('worker', id, config=config)
+			try:
+				job = Job('worker', id, config=config)
+			except Exception, e:
+				print "Job", id, "not loaded:", e
+				continue
+			if job.state == 'error':
+				job.state = "started"
 			if job.state == 'started':
-				print "Processing", job.id, "..."
-				#try:
 				job.run()
-				#except Exception, e:
-				#	print e
-				#	job.error = e
-				#	job.save(set_state='error')
-				#else:
-				job.save(set_state='done')
-				print "It is now", job.state
 
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
