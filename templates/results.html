@@ -35,7 +35,7 @@
 			<dd>Number of signal of this color. Pair signal color + signal number is
 			unique within image.</dd>
 
-			<dt>x y z</dt>
+			<dt>x, y, z</dt>
 			<dd>Coordinates of estimated center of mass of the object (signal /
 			territory / cell). Unit: pixels.</dd>
 
@@ -56,14 +56,13 @@
 			Unit: nm. This value is comparable between images.</dd>
 
 			<dt>onion_distance</dt>
-			<dd>Two-dimensional distance between borders of two signals. To obtain
-			this value we either extend or shrink a signal by one pixel in all
+			<dd>Two-dimensional distance between borders of two signals. Unit: nm. To
+			obtain this value we either extend or shrink a signal by one pixel in all
 			directions until it overlaps both presense and absense of pixels of color
 			of the othe signal. The value is number of layers added/removed. Hence
 			the title: onion distance. Note: this is distance to the nearest signal
 			of given color, not exactly to the signal2 in the table. The distance is
-			very discreet and noisy. Only comparable between images with the same XY
-			resolution.</dd>
+			very discreet and noisy. This value is comparable between images.</dd>
 		</dl>
 
 	{% else %}

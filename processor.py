@@ -392,16 +392,18 @@ def print_signals(spotss):
 @logging
 def print_pairs(spotss):
 	print "cell_n", "color1", "spot1", "color2", "spot2",
-	print "distance", "physical_distance", "onion_distance"
+	print "distance", "physical_distance", "onion_distance",
+	print "overlap", "overlap_volume"
 	for cell_n, cell in iter_cells(spotss):
 		for color1, spot_n1, spot1 in iter_cell_spots(spotss, cell):
 			for color2, spot_n2, spot2 in iter_cell_spots(spotss, cell):
 				if spot1 == spot2:
 					continue
-				distance = "{:.2f}".format(spot1.distance(spot2))
-				physical_distance = "{:.2f}".format(spot1.physical_distance(spot2))
 				print cell_n, color1, spot_n1, color2, spot_n2,
-				print distance, physical_distance, onion_distance(color1, spot1, spotss[color2])
+				print " ".join("{:.2f}".format(value) for value in [
+					spot1.distance(spot2), spot1.physical_distance(spot2),
+					onion_distance(color1, spot1, spotss[color2]),
+				] + overlap(spot1, spot2))
 
 def onion_distance(color1, spot1, spots2):
 	if color1 not in onion_colors:
@@ -409,9 +411,16 @@ def onion_distance(color1, spot1, spots2):
 	onion_distance = spot1.distance_to_variety(spots2, d=(0, 1, 1))
 	if not onion_distance:
 		return "-1"
-	# scale properly
+	# scale properly, assuming resolution by X is the same as by Y
 	onion_distance *= spot1.spots.images.scales[-1]
-	return "{:.2f}".format(onion_distance)
+	return onion_distance
+
+def overlap(spot1, spot2):
+	spots = Spots(spot2.spots.cube)
+	spots.spots = [spot2]
+	overlap = spot1.intersection_occupancy(spots)
+	physical_overlap = spot1.to_physical_volume(overlap)
+	return overlap, physical_overlap
 
 def iter_cells(spotss):
 	for cell_n, cell in enumerate(spotss[cell_color].spots):
