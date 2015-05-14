@@ -402,15 +402,15 @@ def print_pairs(spotss):
 				print cell_n, color1, spot_n1, color2, spot_n2,
 				print " ".join("{:.2f}".format(value) for value in [
 					spot1.distance(spot2), spot1.physical_distance(spot2),
-					onion_distance(color1, spot1, spotss[color2]),
-				] + overlap(spot1, spot2))
+					onion_distance(spot1, color1, spotss[color2]),
+				] + list(overlap(spot1, spot2)))
 
-def onion_distance(color1, spot1, spots2):
+def onion_distance(spot1, color1, spots2):
 	if color1 not in onion_colors:
-		return "-"
+		return -2
 	onion_distance = spot1.distance_to_variety(spots2, d=(0, 1, 1))
-	if not onion_distance:
-		return "-1"
+	if onion_distance is None:
+		return -1
 	# scale properly, assuming resolution by X is the same as by Y
 	onion_distance *= spot1.spots.images.scales[-1]
 	return onion_distance
