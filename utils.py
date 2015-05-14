@@ -6,6 +6,7 @@ import inspect
 
 def log(*args):
 	sys.stderr.write(" ".join(map(str, args)) + "\n")
+	sys.stderr.flush()
 
 def logging(message):
 	def decorator(f):

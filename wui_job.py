@@ -11,6 +11,7 @@ import pickle
 import time
 import optparse
 import processor
+from utils import log
 from wui_helpers import RedirectStd, Chdir, Struct
 
 wipe_multiplier = 1.2
@@ -214,13 +215,13 @@ class Job(object):
 		# This is a wrapper around self._run_processor()
 		# It forks, redirects stdio, changes directory to job
 		# (XXX chdir(job) is a hack)
-		print "Starting job", self.id
+		log("Starting job", self.id)
 		with RedirectStd(self._filename('log.txt')):
 			try:
 				with Chdir(self._filename()):
 					self._run_processor()
 			except Exception, e:
-				print "Job failed:", e
+				log("Job failed:", e)
 				self.error = e
 				self.save(set_state='error')
 			else:
@@ -270,18 +271,22 @@ class Job(object):
 def worker(config):
 	"""Very stupid job processing without redis."""
 	while True:
-		print "Sleeping..."
+		log("Sleeping...")
 		time.sleep(worker_sleep)
-		for id in os.listdir(config['JOB_PREFIX']):
-			try:
-				job = Job('worker', id, config=config)
-			except Exception, e:
-				print "Job", id, "not loaded:", e
-				continue
+		for job in all_jobs():
 			if job.state == 'error':
 				job.state = "started"
 			if job.state == 'started':
 				job.run()
+
+def all_jobs():
+	"""Return a list of all available jobs."""
+	for id in os.listdir(config['JOB_PREFIX']):
+		try:
+			yield Job('worker', id, config=config)
+		except Exception, e:
+			log("Job", id, "not loaded:", e)
+			continue
 
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
