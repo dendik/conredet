@@ -140,6 +140,17 @@ class Job(object):
 		Since options come from user and will be pickled, take extra care
 		to sanitize them.
 		"""
+		self._save_basic_options(options)
+		for color in known_colors:
+			volume = self.options[color + '_volume']
+			self.options[color + '_detect'] = 'topvoxels({})'.format(volume)
+			self.options.pop(color + '2_detect', None)
+			self.options[color + '_role'] = 'signal'
+		self._set_basic_cell_channel(self.options['cell_channel'])
+		self.save()
+
+	def _save_basic_options(self, options):
+		"""Check basic options from web and save to self.options"""
 		for option in list(options):
 			if option not in default_basic_options:
 				del options[option]
@@ -150,21 +161,18 @@ class Job(object):
 				options[option] = int(options[option])
 		self.options.update(options)
 
-		for color in known_colors:
-			volume = options[color + '_volume']
-			self.options[color + '_detect'] = 'topvoxels({})'.format(volume)
-			self.options.pop(color + '2_detect', None)
-			self.options[color + '_role'] = 'signal'
-		color = options['cell_channel']
+	def _set_basic_cell_channel(self, color):
+		"""Assign advanced options from basic cell* options."""
+		assert color in known_colors
+		radius = int(self.options['cell_radius'])
 		self.options[color + '_role'] = 'territory'
 		self.options[color + '2_role'] = 'core'
-		assert color in known_colors
-		options['wipe_radius'] = int(wipe_multiplier * int(options['cell_radius']))
+		self.options[color + '2_max_size'] = 0
+		self.options[color + '2_min_size'] = 0
 		self.options[color + '2_detect'] = (
-			'cylinders(n={n_cells}, radius={cell_radius}, wipe_radius={wipe_radius})'
-			.format(**options)
+			'cylinders(n={n_cells}, radius={cell_radius}, wipe_radius={wipe})'
+			.format(wipe=int(wipe_multiplier * radius), **self.options)
 		)
-		self.save()
 
 	def set(self, options):
 		"""Update options from a dictionary. Convert values from strings.
