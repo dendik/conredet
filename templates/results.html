@@ -22,5 +22,7 @@
 	{% else %}
 		<h2>Job processing, please wait</h2>
 		<p>The page will refresh itself when the job is done.</p>
+		<h2>Job processing log:</h2>
+		<pre>{{job.logfile()|join}}</pre>
 	{% endif %}
 {% endblock %}
