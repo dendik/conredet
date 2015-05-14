@@ -237,6 +237,14 @@ class Job(object):
 		processor.options = options
 		processor.start()
 
+	def logfile(self):
+		"""Return lines of the logfile for the job."""
+		try:
+			with open(self._filename('log.txt')) as fd:
+				return list(fd)
+		except Exception:
+			return ['...']
+
 	def results(self):
 		"""Return a dictionary of filenames of all downloadable file objects.
 		
@@ -273,13 +281,13 @@ def worker(config):
 	while True:
 		log("Sleeping...")
 		time.sleep(worker_sleep)
-		for job in all_jobs():
+		for job in all_jobs(config):
 			if job.state == 'error':
 				job.state = "started"
 			if job.state == 'started':
 				job.run()
 
-def all_jobs():
+def all_jobs(config):
 	"""Return a list of all available jobs."""
 	for id in os.listdir(config['JOB_PREFIX']):
 		try:
