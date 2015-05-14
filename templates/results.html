@@ -62,7 +62,24 @@
 			of the othe signal. The value is number of layers added/removed. Hence
 			the title: onion distance. Note: this is distance to the nearest signal
 			of given color, not exactly to the signal2 in the table. The distance is
-			very discreet and noisy. This value is comparable between images.</dd>
+			very discreet and noisy. This value is comparable between images.
+			<p>There are two special values here.</p>
+			<p>-1 means the distance is too large to be worth computing (the
+			threshold is 20 pixels&nbsp;&mdash; computation get really slow with
+			larger values and in practice this usually means that there is no
+			detected usable pair).</p>
+			<p>-2 means that distance between the two given colors is not computed
+			(currently only distances to red color are computed.</p>
+			</dd>
+
+			<dt>overlap</dt>
+			<dd>Overlap between the two signals. Unit: voxels. This value is not
+			comparable between images with different resolution.</dd>
+
+			<dt>overlap_volume</dt>
+			<dd>Overlap between the two signals. Unit: nm<sup>3</sup>. This value is
+			comparable between images with different resolution.</dd>
+
 		</dl>
 
 	{% else %}
