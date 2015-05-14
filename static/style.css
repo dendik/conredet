@@ -11,6 +11,11 @@ nav h1 {
 	margin-bottom: 0px;
 }
 
+nav h1 a, nav h1 a:visited {
+	text-decoration: none;
+	color: black;
+}
+
 nav {
 	text-align: right;
 }
