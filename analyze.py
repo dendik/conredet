@@ -33,8 +33,6 @@ import numpy as np
 from scipy.ndimage.measurements import center_of_mass
 from utils import Substitute, log, xyzrange, xyzvrange, find_components
 
-infinity = 10**6 # very big number, big enough to be bigger than any spot
-
 class Spot(object):
 
 	def __init__(self, spots, coords):
@@ -294,7 +292,7 @@ class Spots(object):
 	def filter_by_size(self, min_size=None, max_size=None):
 		"""Remove spots not fitting in the given size range."""
 		min_size = min_size or 0
-		max_size = max_size or infinity
+		max_size = max_size or float("+inf")
 		self.spots = [spot
 			for spot in self.spots
 			if min_size <= spot.size() <= max_size]
