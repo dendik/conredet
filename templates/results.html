@@ -19,6 +19,53 @@
 				</li>
 			{% endfor %}
 		</ul>
+
+		<h2>Explanation</h2>
+
+		<p>Fields in CSV files have the following meanings:</p>
+		<dl>
+			<dt>cell_n</dt>
+			<dd>Cell number. Unique within image.</dd>
+
+			<dt>color, color1, color2</dt>
+			<dd>Color of signal / territory / cell. (Cell color is always either of
+			red2, green2, blue2).</dd>
+
+			<dt>spot, spot1, spot2</dt>
+			<dd>Number of signal of this color. Pair signal color + signal number is
+			unique within image.</dd>
+
+			<dt>x y z</dt>
+			<dd>Coordinates of estimated center of mass of the object (signal /
+			territory / cell). Unit: pixels.</dd>
+
+			<dt>size</dt>
+			<dd>Size of the object. Unit: voxels. This value is precise, but not
+			comparable between images.</dd>
+
+			<dt>volume</dt>
+			<dd>Size of the object. Unit: nm<sup>3</sup>. This value is comparable
+			between images.</dd>
+
+			<dt>distance</dt>
+			<dd>Three-dimensional pixel distance between centers of mass of two
+			objects. Unit: pixels. This value is not comparable between images.</dd>
+
+			<dt>physical_distance</dt>
+			<dd>Three-dimensional distance between centers of mass of two objects.
+			Unit: nm. This value is comparable between images.</dd>
+
+			<dt>onion_distance</dt>
+			<dd>Two-dimensional distance between borders of two signals. To obtain
+			this value we either extend or shrink a signal by one pixel in all
+			directions until it overlaps both presense and absense of pixels of color
+			of the othe signal. The value is number of layers added/removed. Hence
+			the title: onion distance. Note: this is distance to the nearest signal
+			of given color, not exactly to the signal2 in the table. The distance is
+			very discreet and noisy. Only comparable between images with the same XY
+			resolution.</dd>
+		</dl>
+
 	{% else %}
 		<h2>Job processing, please wait</h2>
 		<p>The page will refresh itself when the job is done.</p>
