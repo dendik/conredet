@@ -4,6 +4,8 @@ import numpy as np
 import csv
 
 verbose = False
+cell_color = 'red2'
+territory_color = 'red'
 
 class Series(object):
 
@@ -38,7 +40,7 @@ class Series(object):
 	def parse_signals(self, fd):
 		for line in csv.DictReader(fd, delimiter=' '):
 			v = Struct(**line)
-			cell = self.spot('red2', v.cell_n)
+			cell = self.spot(cell_color, v.cell_n)
 			signal = self.spot(v.color, v.spot)
 			signal.set_coords(map(float, [v.x, v.y, v.z]))
 			signal.set_size(0, float(v.volume))
@@ -49,11 +51,14 @@ class Series(object):
 			v = Struct(**line)
 			spot1 = self.spot(v.color1, v.spot1)
 			spot2 = self.spot(v.color2, v.spot2)
+			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
+			spot2.o_distances[spot1.color] = float(v.onion_distance)
+			spot2.r_distances[spot1.color] = float(v.physical_distance)
+			if spot2.o_distances[spot1.color] < 0:
+				spot2.o_distances[spot1.color] = float('inf')
 			if float(v.overlap_volume) > 0:
 				overlap(spot1, spot2)
-			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
-			spot1.o_distances[spot2.color] = float(v.onion_distance)
-			spot1.r_distances[spot2.color] = float(v.physical_distance)
+				spot2.o_distances[spot1.color] *= -1
 
 	@staticmethod
 	def parse_blocks(fd, n_headers=2):
@@ -100,18 +105,15 @@ class Series(object):
 
 	def mark_good(self):
 		Spot.good = False
-		for spot in self.spots.values():
-			if not spot.is_cell():
-				continue
-
-			green = len(spot.overlaps_by('green'))
-			blue = len(spot.overlaps_by('blue'))
-			red = len(spot.overlaps_by('red'))
+		for cell in self.sorted_cells():
+			green = len(cell.overlaps_by('green'))
+			blue = len(cell.overlaps_by('blue'))
+			red = len(cell.overlaps_by('red'))
 
 			if green == blue == 2:
-				spot.good = True
-				for spot in spot.overlaps:
-					spot.good = True
+				cell.good = True
+				for cell in cell.overlaps:
+					cell.good = True
 
 class Spot(object):
 	overlaps = None
@@ -161,9 +163,15 @@ class Spot(object):
 	def is_cell(self):
 		return '2' in self.color
 
-	def other_signal(self, pairs={'green':'blue', 'blue':'green'}):
-		spot, = (spot for spot in self.overlaps if spot.color == pairs[self.color])
-		return spot
+	@property
+	def cell(self):
+		for spot in self.overlaps:
+			if spot.is_cell():
+				return spot
+
+	def other_signal(self, pair={'green':'blue', 'blue':'green'}):
+		others = self.cell.overlaps_by(pair[self.color])
+		return min(others, key=self.distance)
 
 	def is_not_broken(self):
 		try:
@@ -171,6 +179,12 @@ class Spot(object):
 		except Exception:
 			return False
 		return self.occupancies[0, spot.color] >= (min(self.size, spot.size) / 2)
+
+	def territory_color(self):
+		return territory_color
+
+	def sum_size(self, color):
+		return sum(other.sizes[0] for other in self.overlaps_by(color))
 
 	def repr_overlaps(self, color=None):
 		if color is None:
@@ -200,6 +214,9 @@ class Spot(object):
 			if (extension, color) in self.occupancies
 		]
 		return ",".join([size] + occupancies)
+
+	def distance(self, other):
+		return np.linalg.norm(self.center - other.center)
 
 	def __repr__(self):
 		return '\t'.join([
