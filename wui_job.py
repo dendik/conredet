@@ -11,8 +11,10 @@ import pickle
 import time
 import optparse
 import processor
-from utils import log
+import results
+import format_results
 from wui_helpers import RedirectStd, Chdir, Struct
+from utils import log
 
 wipe_multiplier = 1.2
 worker_sleep = 10 # seconds between job attempts
@@ -215,17 +217,21 @@ class Job(object):
 		# This is a wrapper around self._run_processor()
 		# It forks, redirects stdio, changes directory to job
 		# (XXX chdir(job) is a hack)
-		log("Starting job", self.id)
 		with RedirectStd(self._filename('log.txt')):
 			try:
 				with Chdir(self._filename()):
-					self._run_processor()
+					self._run()
 			except Exception, e:
 				log("Job failed:", e)
 				self.error = e
 				self.save(set_state='error')
 			else:
 				self.save(set_state='done')
+
+	def _run(self):
+		"""Assuming the environment is setup, run job steps."""
+		self._run_processor()
+		self._run_postprocessing()
 
 	def _run_processor(self):
 		"""Run the required function from processor to run the jub."""
@@ -236,6 +242,12 @@ class Job(object):
 		processor.parse_color_list_options(options)
 		processor.options = options
 		processor.start()
+
+	def _run_postprocessing(self):
+		"""Generate useful aggregate tables."""
+		series = results.Series(self._filename())
+		with RedirectStd(self._filename('pt_distances.csv')):
+			format_results.print_pt_distances(series)
 
 	def logfile(self):
 		"""Return lines of the logfile for the job."""
@@ -282,9 +294,8 @@ def worker(config):
 		log("Sleeping...")
 		time.sleep(worker_sleep)
 		for job in all_jobs(config):
-			if job.state == 'error':
-				job.state = "started"
 			if job.state == 'started':
+				log("Starting job", job.id)
 				job.run()
 
 def all_jobs(config):
