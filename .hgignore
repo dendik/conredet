@@ -5,6 +5,7 @@ static/jquery.*
 czifile.*
 
 # Compiled stuff
+__pycache__/
 *.pyc
 sloth/
 
