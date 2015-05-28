@@ -34,6 +34,10 @@ def ifverbose(function):
 def roundint(value):
 	return int(value + 0.5)
 
+class Struct(object):
+	def __init__(self, **kwargs):
+		vars(self).update(kwargs)
+
 class Re(object):
 	had_match = False
 	def __init__(self, text):

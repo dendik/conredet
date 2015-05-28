@@ -1,6 +1,7 @@
-from os.path import join
-from utils import log
+from os.path import join, exists
+from utils import log, Struct
 import numpy as np
+import csv
 
 verbose = False
 
@@ -11,15 +12,8 @@ class Series(object):
 		self.spots = {}
 		self.colors = set()
 		self.scale = None
-
-		with open(join(prefix, 'scale.csv')) as scale:
-			self.parse_scale(scale)
-		with open(join(prefix, 'stats.csv')) as stats:
-			self.parse_stats(stats)
-		with open(join(prefix, 'spots.csv')) as spots:
-			self.parse_spots(spots)
-		with open(join(prefix, 'distances.csv')) as distances:
-			self.parse_distances(distances)
+		self.parse(['scale', 'signals', 'pairs',
+			'stats', 'spots', 'distances'])
 
 	def sorted_spots(self):
 		return (self.spots[key] for key in sorted(self.spots))
@@ -32,6 +26,34 @@ class Series(object):
 		if (color, number) not in self.spots:
 			self.spots[color, number] = Spot(self, color, number)
 		return self.spots[color, number]
+
+	def parse(self, names):
+		for name in names:
+			filename = join(self.prefix, name + '.csv')
+			parser = getattr(self, 'parse_' + name)
+			if exists(filename):
+				with open(filename) as file:
+					parser(file)
+
+	def parse_signals(self, fd):
+		for line in csv.DictReader(fd, delimiter=' '):
+			v = Struct(**line)
+			cell = self.spot('red2', v.cell_n)
+			signal = self.spot(v.color, v.spot)
+			signal.set_coords(map(float, [v.x, v.y, v.z]))
+			signal.set_size(0, float(v.volume))
+			overlap(cell, signal)
+
+	def parse_pairs(self, fd):
+		for line in csv.DictReader(fd, delimiter=' '):
+			v = Struct(**line)
+			spot1 = self.spot(v.color1, v.spot1)
+			spot2 = self.spot(v.color2, v.spot2)
+			if float(v.overlap_volume) > 0:
+				overlap(spot1, spot2)
+			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
+			spot1.o_distances[spot2.color] = float(v.onion_distance)
+			spot1.r_distances[spot2.color] = float(v.physical_distance)
 
 	@staticmethod
 	def parse_blocks(fd, n_headers=2):
@@ -62,12 +84,12 @@ class Series(object):
 			spot1 = self.spot(color1, number)
 			for number in overlaps:
 				spot2 = self.spot(color2, number)
-				spot1.overlaps.add(spot2)
-				spot2.overlaps.add(spot1)
+				overlap(spot1, spot2)
 
 	def parse_scale(self, fd):
-		for line in fd:
-			self.scale = np.array(map(float, line.strip().split()[:3]))
+		for line in csv.DictReader(fd, delimiter=' '):
+			v = Struct(**line)
+			self.scale = np.array(map(float, [v.x, v.y, v.z]))
 
 	def parse_distances(self, fd):
 		line = self.parse_blocks(fd)
@@ -186,3 +208,7 @@ class Spot(object):
 			self.repr_overlaps(),
 			self.repr_occupancies(),
 		])
+
+def overlap(spot1, spot2):
+	spot1.overlaps.add(spot2)
+	spot2.overlaps.add(spot1)
