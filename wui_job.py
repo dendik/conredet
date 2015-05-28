@@ -245,8 +245,10 @@ class Job(object):
 
 	def _run_postprocessing(self):
 		"""Generate useful aggregate tables."""
-		series = results.Series(self._filename())
-		with RedirectStd(self._filename('pt_distances.csv')):
+		# we are in Chdir(), hence no self._filename() stuff
+		# This is bad since series names end up in the csv tables
+		series = results.Series('.')
+		with RedirectStd('pt_distances.csv'):
 			format_results.print_pt_distances(series)
 
 	def logfile(self):
