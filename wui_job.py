@@ -230,8 +230,10 @@ class Job(object):
 
 	def _run(self):
 		"""Assuming the environment is setup, run job steps."""
+		log("Starting...")
 		self._run_processor()
 		self._run_postprocessing()
+		log("Done!")
 
 	def _run_processor(self):
 		"""Run the required function from processor to run the jub."""
@@ -247,6 +249,7 @@ class Job(object):
 		"""Generate useful aggregate tables."""
 		# we are in Chdir(), hence no self._filename() stuff
 		# This is bad since series names end up in the csv tables
+		log("Postprocessing...")
 		series = results.Series('.')
 		with RedirectStd('pt_distances.csv'):
 			format_results.print_pt_distances(series)
@@ -309,10 +312,20 @@ def all_jobs(config):
 			log("Job", id, "not loaded:", e)
 			continue
 
+def run_one(prefix, id):
+	job = Job('worker', id, config=dict(JOB_PREFIX=prefix))
+	assert job.state != 'started'
+	job.state = 'started'
+	job.run()
+
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
 	parser.add_option('-j', '--job-prefix', help='Path to job folders')
+	parser.add_option('-r', '--run', help='Run one job and quit')
 	options, args = parser.parse_args()
-	worker(dict(JOB_PREFIX=options.job_prefix))
+	if options.run:
+		run_one(*os.path.split(options.run))
+	else:
+		worker(dict(JOB_PREFIX=options.job_prefix))
 
 # vim: set noet:
