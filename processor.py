@@ -62,6 +62,7 @@ def process_colors(spotss, images, colors, normalized=None):
 
 @logging
 def print_results(spotss, images):
+	print_scale(images)
 	print_signals(spotss)
 	print_pairs(spotss)
 	print_stats(spotss, images)
@@ -131,16 +132,7 @@ def load_images():
 		images = load_czi_images(options.czi_images)
 	elif options.nd2_images:
 		images = load_nd2_images(options.nd2_images)
-	print_images_metadata(images)
 	return images
-
-def print_images_metadata(images):
-	wavelengths = ["{}: {}nm".format(color, int(wavelength))
-		for color, wavelength in zip("RGB", images.wavelengths)]
-	scales = ["{}: {}nm".format(axis, int(scale))
-		for axis, scale in reversed(zip("ZYX", images.scales))]
-	log("Channels:", " ".join(wavelengths))
-	log("Scales:", " ".join(scales))
 
 @logging
 def load_glob_images(filename):
@@ -379,14 +371,27 @@ def with_output(function):
 
 @with_output
 @logging
+def print_scale(images):
+	meta = {}
+	meta.update(dict(zip("rgb", images.wavelengths)))
+	meta.update(dict(zip("zyx", images.scales)))
+	print "x", "y", "z", "r", "g", "b", "unit"
+	print " ".join('{:.2f}'.format(meta[name]) for name in"xyzrgb"), "nm"
+
+@with_output
+@logging
 def print_signals(spotss):
 	print "cell_n", "color", "spot", "x", "y", "z", "size", "volume"
 	for cell_n, cell in iter_cells(spotss):
+		print_signal_stats(cell_n, 'red2', cell_n, cell)
 		for color, spot_n, spot in iter_cell_spots(spotss, cell):
-			z, y, x = ('{:.2f}'.format(coord) for coord in spot.center_of_mass())
-			size = spot.size()
-			volume = spot.to_physical_volume(size)
-			print cell_n, color, spot_n, x, y, z, size, volume
+			print_signal_stats(cell_n, color, spot_n, spot)
+
+def print_signal_stats(cell_n, color, spot_n, spot):
+	z, y, x = ('{:.2f}'.format(coord) for coord in spot.center_of_mass())
+	size = spot.size()
+	volume = spot.to_physical_volume(size)
+	print cell_n, color, spot_n, x, y, z, size, volume
 
 @with_output
 @logging
@@ -575,6 +580,7 @@ def option_parser():
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-n", "--nd2-images", help="nd2 file with images")
+	p.add_option("-S", "--out-scale", help="file with scale & wavelength metadata")
 	p.add_option("-1", "--out-signals", help="file with per-signal data")
 	p.add_option("-2", "--out-pairs", help="file with per-pair data")
 	p.add_option("-o", "--out-stats", help="obsolete file with stats")
