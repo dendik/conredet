@@ -296,7 +296,6 @@ class Job(object):
 def worker(config):
 	"""Very stupid job processing without redis."""
 	while True:
-		log("Sleeping...")
 		time.sleep(worker_sleep)
 		for job in all_jobs(config):
 			if job.state == 'started':
