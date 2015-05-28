@@ -9,9 +9,10 @@ jQuery(function($){
 
 	// use nav as tabs
 	$navlinks.each(function(){
-		var $link = $(this)
-		$link.click(function(event){
-			$image.attr('src', "img-b" + $link.attr('id') + ".png")
+		var $link = $(this), id = $link.attr('id')
+		$("<span class='fix-tabs'>").attr('id', id).insertBefore($link)
+		$link.attr('id', 'a-' + id).click(function(event){
+			$image.attr('src', "img-b" + id + ".png")
 		})
 	})
 

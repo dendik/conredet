@@ -34,7 +34,7 @@ nav a, nav a:visited {
 	border-radius: 10px;
 }
 
-nav a:target, nav a#target {
+nav a:target, nav a#target, nav .fix-tabs:target ~ a {
 	font-weight: bolder;
 	background: #bff;
 }
@@ -83,4 +83,10 @@ a.advanced {
 	image-rendering: -webkit-pixelated;/* Webkit (non-standard naming) */
 	image-rendering: pixelated;
 	-ms-interpolation-mode: nearest-neighbor;  /* IE (non-standard property) */
+}
+
+.fix-tabs {
+	position: fixed;
+	top: 0px;
+	left: 0px;
 }
