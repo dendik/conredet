@@ -1,7 +1,10 @@
 syntax: glob
 
-static/jquery.js
+# Dependencies
+static/jquery.*
+czifile.*
 
+# Compiled stuff
 *.pyc
 sloth/
 
@@ -9,3 +12,4 @@ sloth/
 jobs/
 ?
 ?.*
+*.txt

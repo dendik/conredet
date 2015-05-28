@@ -38,6 +38,16 @@ def results(id, filename=None):
 		return send_file(path, attachment_filename=filename, as_attachment=True)
 	return render_template("results.html", job=job)
 
+@app.route("/view/<id>/")
+@app.route("/view/<id>/<filename>")
+def view(id, filename=None):
+	job = Job('client', id, config=app.config)
+	if filename:
+		assert filename.startswith("img-") and filename.endswith(".png")
+		path = job.results()[filename]
+		return send_file(path)
+	return render_template("view.html", job=job)
+
 if __name__ == "__main__":
 	app.run(debug=True, host='0.0.0.0')
 
