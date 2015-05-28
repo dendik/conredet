@@ -56,20 +56,25 @@ def print_with_prefix(series):
 
 def print_distances(series):
 	print_header('prefix spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size o_distance r_distance territory_occupancy')
-	series.mark_good()
-	for spot in series.sorted_spots():
-		if not spot.good:
-			continue
-		try:
-			other = spot.other_signal()
-		except Exception:
-			continue
-		for color2 in spot.o_distances:
-			territory_size = sum((other.sizes[0] for other in spot.overlaps if other.color == color2), 0)
-			print series.prefix, spot.number, spot.color, spot.sizes[0],
-			print other.color, other.sizes[0], spot.occupancies[0, other.color],
-			print color2, territory_size,
-			print spot.o_distances[color2], spot.r_distances[color2], spot.occupancies[0, 'red']
+	for spot, other in iter_good_pairs(series):
+		territory_color = spot.territory_color()
+		territory_size = spot.cell.sum_size(territory_color)
+		print series.prefix, spot.number, spot.color, spot.sizes[0],
+		print other.color, other.sizes[0], spot.occupancies[0, other.color],
+		print territory_color, territory_size, spot.o_distances[territory_color],
+		print spot.r_distances[territory_color], spot.occupancies[0, territory_color]
+
+def print_pt_distances(series):
+	print_header('prefix cell_number spot_color spot_number spot_size'
+		' other_color other_number other_size spot_distance spot_overlap'
+		' territory_distance territory_overlap')
+	for spot, other in iter_good_pairs(series):
+		territory_color = spot.territory_color()
+		print series.prefix, spot.cell.number,
+		print spot.color, spot.number, spot.sizes[0],
+		print other.color, other.number, other.sizes[0],
+		print spot.distance(other), spot.occupancies[0, other.color],
+		print spot.o_distances[territory_color], spot.occupancies[0, territory_color]
 
 def print_cell_distances(series):
 	print_header('prefix cell_number spot_number spot_color spot_size distance')
@@ -89,6 +94,17 @@ def print_series(prefix):
 		if getattr(options, option_name, False):
 			function(series)
 
+def iter_good_pairs(series):
+	series.mark_good()
+	for spot in series.sorted_spots():
+		if not spot.good:
+			continue
+		try:
+			other = spot.other_signal()
+		except Exception:
+			continue
+		yield spot, other
+
 if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
@@ -97,6 +113,7 @@ if __name__ == "__main__":
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("--distances", action="store_true")
+	p.add_option("--pt-distances", action="store_true")
 	p.add_option("--cell-distances", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
