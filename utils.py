@@ -5,14 +5,18 @@ import functools
 import inspect
 
 def log(*args):
+	args = (time.strftime("[%F %T]"),) + args
 	sys.stderr.write(" ".join(map(str, args)) + "\n")
 	sys.stderr.flush()
+
+def log_dict(dict):
+	log(*("{}={}".format(key, dict[key]) for key in sorted(dict)))
 
 def logging(message):
 	def decorator(f):
 		@functools.wraps(f)
 		def result(*args, **kws):
-			log(time.strftime("%T"), message)
+			log(message)
 			return f(*args, **kws)
 		return result
 

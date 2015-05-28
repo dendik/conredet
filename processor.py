@@ -7,7 +7,7 @@ from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
 
 from analyze import Images, Spots
-from utils import log, logging, ifverbose, roundint, Re, dict_path
+from utils import log, log_dict, logging, ifverbose, roundint, Re, dict_path
 
 options = None
 colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
@@ -25,7 +25,7 @@ def main():
 def start():
 	global images # see XXX in detect_signals
 	for color in sorted(options.color):
-		log(options.color[color])
+		log_dict(vars(options.color[color]))
 	images = load_images()
 
 	draw_flat_images(images, "img-src.png")
