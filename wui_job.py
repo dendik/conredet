@@ -29,7 +29,7 @@ basic_help = dict(
 	blue_volume = "Expected of voxels in blue signal",
 )
 
-outfile_options = ('out_signals', 'out_pairs')
+outfile_options = ('out_scale', 'out_signals', 'out_pairs')
 options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
 	'out_stats', 'out_spots', 'out_distances') + outfile_options
 
