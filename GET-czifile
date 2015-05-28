@@ -1,4 +1,0 @@
-#!/bin/sh
-wget \
-	http://www.lfd.uci.edu/~gohlke/code/czifile.py \
-	http://www.lfd.uci.edu/~gohlke/code/czifile.pyx
