@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block head %}
+	<script src="{{url_for('static', filename='jquery.panzoom.js')}}">
+	</script>
+	<script src="{{url_for('static', filename='jquery.mousewheel.js')}}">
+	</script>
+	<script src="{{url_for('static', filename='view.js')}}">
+	</script>
+{% endblock %}
+
+{% block main %}
+	<h2>Job results</h2>
+
+	<nav class="zoom">
+		<ul>
+		{% for color in ['blue', 'green', 'red', 'red2'] %}
+			<li><a id="{{color}}" href="#{{color}}">{{color}}</a></li>
+		{% endfor %}
+		</ul>
+	</nav>
+
+	<div class="zoom-container">
+		<img src="img-bblue.png">
+	</div>
+
+{% endblock %}

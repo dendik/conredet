@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 {% set title = "conredet" %}
 {% set subtitle = "Detect regions in confocal microscope images" %}
+{% macro target(view, id="target") %}
+	{% if request.endpoint == view %}id="{{id}}"{% endif %}
+{% endmacro %}
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -19,6 +22,16 @@
 		{% if subtitle %}
 			<h2>{{subtitle}}</h2>
 		{% endif %}
+		<ul>
+			{% if job is defined %}
+				<li>Job results: <a {{target('results')}}
+					href="{{url_for('results', id=job.id)}}">Download</a></li>
+			{% endif %}
+			{% if job is defined and job.is_done() %}
+				<li><a {{target('view')}}
+					href="{{url_for('view', id=job.id)}}">View</a></li>
+			{% endif %}
+		</ul>
 	</nav>
 
 	<div id="main">
