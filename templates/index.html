@@ -1,15 +1,36 @@
 {% extends "base.html" %}
 
 {% block main %}
+<h2>About</h2>
+
+<p>Conredet detects cells and signals within confocal microscope 3D images.</p>
+
+<p>Input image should have one layer of nearly-circular cells having most of
+their volume visible in at least one channel. Image shour contain one channel
+for chromosome territories of arbitrary shape and several channels for tiny
+(less than wavelength) signals. For either a fixed volume in pixels is assumed.</p>
+
+<p>As a result conredet produces tables with cell locations, signals and
+territories locations and sizes and their mutual distances within each cell.
+The only significant difference between signals and territories is in the way
+distances are calculated: for territories border-to-border distance is computed
+while for signals the distance between geometrical centers seems more reasonable.</p>
+
 <h2>Start a new job</h2>
+
+<p>Please begin by uploading an image. You will be directed to recognition
+configuration page once upload is completed.</p>
+
 <form
 		action="{{url_for('setup')}}"
 		enctype='multipart/form-data'
 		method='post'>
 	<div class="input">
-		<label>Your image, please:</label>
+		<label>Image:</label>
 		<input type="file" name='image'>
 	</div>
 	<input type="submit" name='go' value='OK'>
 </form>
+
+<p>The program currently accepts nd2 and czi image formats.</p>
 {% endblock %}
