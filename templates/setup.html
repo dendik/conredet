@@ -4,25 +4,6 @@
 <h2>Configure your job</h2>
 
 <form
-		action="{{url_for('setup')}}"
-		enctype='multipart/form-data'
-		method='post'>
-	<input type="hidden" name="id" value="{{job.id}}">
-
-	<div class="input">
-		<label>Current filename:</label>
-		<div class="filename">"{{job.image_filename}}"</div>
-	</div>
-	<div class="input">
-		<label for='image'>Change file:</label>
-		<input type="file" name='image'>
-	</div>
-
-	<input class="button" type="submit" name='go' value='Upload'>
-	<input class="button" type="submit" name="start" value="Start">
-</form>
-
-<form
 		class="basic"
 		action="{{url_for('setup')}}"
 		method="post">
