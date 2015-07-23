@@ -13,6 +13,7 @@ import optparse
 import processor
 import results
 import format_results
+import traceback
 from wui_helpers import RedirectStd, Chdir, Struct
 from utils import log
 
@@ -84,11 +85,17 @@ class Job(object):
 		self.save()
 
 	def load(self, id):
-		"""Load job with a given id from storage."""
+		"""Load job with a given id from storage.
+		
+		Become radioactive mutant in the process.
+		(I.e. change class of self to that of the loaded job)
+		"""
 		self.id = id
 		role = self.role
 		with open(self._filename(job_filename), 'rb') as fd:
-			vars(self).update(vars(pickle.load(fd)))
+			loaded = pickle.load(fd)
+			vars(self).update(vars(loaded))
+		self.__class__ = loaded.__class__ # HACK: we become radioactive mutants
 		self.role = role
 
 	def save(self, set_state=None):
@@ -223,6 +230,7 @@ class Job(object):
 					self._run()
 			except Exception, e:
 				log("Job failed:", e)
+				log(traceback.format_exc())
 				self.error = e
 				self.save(set_state='error')
 			else:
@@ -292,6 +300,58 @@ class Job(object):
 				continue
 			self.options[option.dest] = parser.defaults[option.dest]
 			self.help[option.dest] = option.help
+
+class Batch(Job):
+
+	def create(self):
+		self.job_ids = []
+		Job.create(self)
+
+	def set_image(self, files):
+		"""Create a new job for each image file uploaded."""
+		assert not self.job_ids
+		assert files
+		for file in files:
+			job = Job(self.role, config=self.config)
+			job.set_image(file)
+			job.save()
+			self.job_ids.append(job.id)
+		assert self.job_ids
+		assert len(self.job_ids) == len(files)
+		self.save()
+		assert self.job_ids
+
+	def start(self):
+		"""Within ui. Configure each subjob. Set each subjob started."""
+		assert self.job_ids
+		Job.start(self)
+		for job in self.jobs():
+			for var in self.options:
+				if var in options_blacklist:
+					continue
+				job.options[var] = self.options[var]
+			job.save(set_state='started')
+
+	def run(self):
+		"""Within worker. If all jobs are done, we are done too."""
+		for job in self.jobs():
+			if not job.is_done():
+				return
+		self.save(set_state='done')
+
+	def jobs(self):
+		"""Iterate all jobs within batch."""
+		for id in self.job_ids:
+			yield Job(self.role, id=id, config=self.config)
+
+	def results(self):
+		"""Within ui. Return all files of all jobs."""
+		results = {}
+		for job in self.jobs():
+			job_results = job.results()
+			for filename in job_results:
+				results[job.id + '/' + filename] = job_results[filename]
+		return results
 
 def worker(config):
 	"""Very stupid job processing without redis."""
