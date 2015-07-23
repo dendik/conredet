@@ -90,3 +90,21 @@ a.advanced {
 	top: 0px;
 	left: 0px;
 }
+
+/* Job status within batch results */
+
+.done, .started, .new, .error {
+	font-weight: bold;
+}
+
+.done {
+	color: green;
+}
+
+.started {
+	color: darkgrey;
+}
+
+.error, .new {
+	color: red;
+}

@@ -8,6 +8,18 @@
 {% endblock %}
 
 {% block main %}
+	{% if job.job_ids is defined %}
+		<h2>Sub jobs</h2>
+		<ul>
+			{% for subjob in job.jobs() %}
+				<li>
+					<a href="{{url_for('results', id=subjob.id)}}">{{subjob.id}}</a>:
+					<span class="{{subjob.state}}">{{subjob.state}}</span>
+				</li>
+			{% endfor %}
+		</ul>
+	{% endif %}
+
 	{% if job.is_done() %}
 		<h2>Job results</h2>
 		<ul>

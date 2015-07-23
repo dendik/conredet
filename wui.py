@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, send_file
 from flask import redirect, url_for
 from wui_helpers import ConfigObject
-from wui_job import Job
+from wui_job import Job, Batch
 
 class config(object):
 	JOB_PREFIX = 'jobs'
@@ -17,9 +17,9 @@ def index():
 
 @app.route("/setup", methods=["POST"])
 def setup():
-	job = Job('client', request.values.get('id'), config=app.config)
+	job = Batch('client', request.values.get('id'), config=app.config)
 	if 'image' in request.files:
-		job.set_image(request.files['image'])
+		job.set_image(request.files.getlist('image'))
 	if 'basic' in request.values:
 		job.set_basic(request.values.to_dict())
 	if 'advanced' in request.values:
