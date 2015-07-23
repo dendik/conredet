@@ -26,9 +26,9 @@ basic_help = dict(
 	n_cells = "Expected number of cells",
 	cell_radius = "Expected cell radius in pixels",
 	cell_channel = "Cell channel",
-	red_volume = "Expected of voxels in red signal",
-	green_volume = "Expected of voxels in green signal",
-	blue_volume = "Expected of voxels in blue signal",
+	red_volume = "Expected number of voxels in red signal",
+	green_volume = "Expected number of voxels in green signal",
+	blue_volume = "Expected number of voxels in blue signal",
 )
 
 outfile_options = ('out_scale', 'out_signals', 'out_pairs')
