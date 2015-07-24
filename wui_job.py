@@ -350,7 +350,7 @@ class Batch(Job):
 		for job in self.jobs():
 			job_results = job.results()
 			for filename in job_results:
-				results[job.id + '/' + filename] = job_results[filename]
+				results[job.id + '-' + filename] = job_results[filename]
 		return results
 
 def worker(config):
