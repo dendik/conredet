@@ -42,11 +42,12 @@ def results(id, filename=None):
 @app.route("/view/<id>/<filename>")
 def view(id, filename=None):
 	job = Job('client', id, config=app.config)
+	images = [name for name in job.results() if name.endswith(".png")]
 	if filename:
-		assert filename.startswith("img-") and filename.endswith(".png")
+		assert filename.endswith(".png")
 		path = job.results()[filename]
 		return send_file(path)
-	return render_template("view.html", job=job)
+	return render_template("view.html", job=job, images=images)
 
 if __name__ == "__main__":
 	app.run(debug=True, host='0.0.0.0')

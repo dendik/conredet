@@ -35,7 +35,6 @@ nav a, nav a:visited {
 }
 
 nav a:target, nav a#target, nav .fix-tabs:target ~ a {
-	font-weight: bolder;
 	background: #bff;
 }
 

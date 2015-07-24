@@ -16,8 +16,8 @@
 
 	<nav class="zoom">
 		<ul>
-		{% for color in ['blue', 'green', 'red', 'red2'] %}
-			<li><a id="{{color}}" href="#{{color}}">{{color}}</a></li>
+		{% for file in images | sort %}
+			<li><a id="{{file}}" href="#{{file}}">{{file}}</a></li>
 		{% endfor %}
 		</ul>
 	</nav>
