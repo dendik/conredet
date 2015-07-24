@@ -418,7 +418,11 @@ class Batch(Job):
 	def run(self):
 		"""Within worker. If all jobs are done, we are done too."""
 		for job in self.jobs():
-			if not job.is_done():
+			if job.state == 'started':
+				return
+		for job in self.jobs():
+			if job.state == 'error':
+				self.save(set_state='error')
 				return
 		self.save(set_state='done')
 
