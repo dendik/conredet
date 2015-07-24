@@ -14,6 +14,8 @@ import processor
 import results
 import format_results
 import traceback
+from StringIO import StringIO
+from zipfile import ZipFile
 from wui_helpers import RedirectStd, Chdir, Struct
 from utils import log
 
@@ -270,7 +272,7 @@ class Job(object):
 		except Exception:
 			return ['...']
 
-	def results(self):
+	def results(self, sep=None):
 		"""Return a dictionary of filenames of all downloadable file objects.
 		
 		key: filename, value: path.
@@ -281,6 +283,17 @@ class Job(object):
 				continue
 			results[filename] = self._filename(filename)
 		return results
+
+	def zip(self):
+		"""Return a zip file with all results."""
+		result = StringIO()
+		with ZipFile(result, 'w') as zipfile:
+			results = self.results(sep='/')
+			for filename in results:
+				if 'input' not in filename:
+					zipfile.write(results[filename], filename)
+		result.seek(0)
+		return result
 
 	def _set_path_options(self):
 		"""Set options related to paths."""
@@ -344,13 +357,13 @@ class Batch(Job):
 		for id in self.job_ids:
 			yield Job(self.role, id=id, config=self.config)
 
-	def results(self):
+	def results(self, sep='-'):
 		"""Within ui. Return all files of all jobs."""
 		results = {}
 		for job in self.jobs():
 			job_results = job.results()
 			for filename in job_results:
-				results[job.id + '-' + filename] = job_results[filename]
+				results[job.id + sep + filename] = job_results[filename]
 		return results
 
 def worker(config):

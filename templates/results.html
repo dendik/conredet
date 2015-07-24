@@ -22,6 +22,7 @@
 
 	{% if job.is_done() %}
 		<h2>Job results</h2>
+		<a href="{{url_for('results', id=job.id, filename=job.id + '.zip')}}">Download</a>
 		<ul>
 			{% for filename in job.results() | sort %}
 				<li>
