@@ -23,7 +23,7 @@
 	{% if job.is_done() %}
 		<h2>Job results</h2>
 		<ul>
-			{% for filename in job.results() %}
+			{% for filename in job.results() | sort %}
 				<li>
 					<a href="{{url_for('results', id=job.id, filename=filename)}}">
 						{{filename}}
