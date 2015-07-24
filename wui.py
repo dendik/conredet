@@ -22,11 +22,11 @@ def setup():
 		job.set_image(request.files.getlist('image'))
 	if 'meta' in request.values:
 		job.set_meta(request.values.to_dict())
-	if 'basic' in request.values:
+	if 'basic' in request.values or 'start_basic' in request.values:
 		job.set_basic(request.values.to_dict())
-	if 'advanced' in request.values:
+	if 'advanced' in request.values or 'start_advanced' in request.values:
 		job.set(request.values.to_dict())
-	if 'start' in request.values:
+	if 'start_basic' in request.values or 'start_advanced' in request.values:
 		job.start()
 		return redirect(url_for('results', id=job.id))
 	return render_template("setup.html", job=job)
