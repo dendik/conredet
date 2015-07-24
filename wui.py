@@ -31,8 +31,10 @@ def setup():
 
 @app.route("/results/<id>")
 @app.route("/results/<id>/<filename>")
-def results(id, filename=None):
+def results(id, filename=''):
 	job = Job('client', id, config=app.config)
+	if filename.endswith('.zip'):
+		return send_file(job.zip(), attachment_filename=filename, as_attachment=True)
 	if filename:
 		path = job.results()[filename]
 		return send_file(path, attachment_filename=filename, as_attachment=True)
