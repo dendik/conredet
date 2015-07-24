@@ -360,7 +360,7 @@ class Job(object):
 			results = self.results(sep='/')
 			for filename in results:
 				if 'input' not in filename:
-					zipfile.write(results[filename], filename)
+					zipfile.write(results[filename], self.name() + '/' + filename)
 		result.seek(0)
 		return result
 
