@@ -6,6 +6,7 @@ files, and sleep for synchronization.
 May switch to Redis someday.
 """
 import os
+import re
 from uuid import uuid4
 import pickle
 import time
@@ -37,6 +38,32 @@ basic_help = dict(
 outfile_options = ('out_scale', 'out_signals', 'out_pairs')
 options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
 	'out_stats', 'out_spots', 'out_distances') + outfile_options
+
+date_re = r'\d{4}-\d{2}-\d{2}'
+duration_re = r'\d(s|sec\w*|m|min\w*|h|hour|hr|d|day|w|week|month)'
+treatment_re = '{date_re} {duration_re} .*'.format(**vars())
+meta_options = {
+	'name': r'^.*$',
+	'cell_culture': r'^.+$',
+	'dish_id': r'^.*$',
+	'preparation_date': '^{date_re}$'.format(**vars()),
+	'hybridization_date': '^{date_re}$'.format(**vars()),
+	'treatment': '^$|^{treatment_re}(, {treatment_re})*$'.format(**vars()),
+	'tagged_locus_1': '^.+$',
+	'tagged_locus_2': '^.*$',
+	'tagged_locus_3': '^.*$',
+}
+meta_help = {
+	'name': 'Job name (folder name for files), optional. Default is {dish_id}_{last_treatment}_{tagged_locus_1}',
+	'cell_culture': 'Cell culture identification, e. g.: HeLa',
+	'dish_id': 'Freeform dish name before any treatment, optional. Should be the same dish for control and treated samples.',
+	'preparation_date': 'Fixed cells samples preparation date, required, e. g.: 1898-08-31',
+	'hybridization_date': 'Hybridization date, possibly empty, e. g.: 1898-08-31',
+	'treatment': 'Treatment applied; a possibly empty comma-separated list of: date duration description, e. g.: 2015-01-01 1hour etoposide, 2015-01-01 90min reparation',
+	'tagged_locus_1': 'Name of tagged locus (site, gene, territory) visible in color channel 1 (will be displayed red), e. g.: MLL1 or chr11',
+	'tagged_locus_2': 'Name of tagged locus (site, gene, territory) visible in color channel 2 (will be displayed green), e. g.: MLL1 or chr11',
+	'tagged_locus_3': 'Name of tagged locus (site, gene, territory) visible in color channel 3 (will be displayed blue), e. g.: MLL1 or chr11',
+}
 
 known_extensions = ('nd2', 'czi')
 known_colors = ('red', 'green', 'blue')
@@ -78,10 +105,10 @@ class Job(object):
 		"""Create a new empty job with unique id."""
 		self.id = str(uuid4())
 		self.state = 'new'
-		self.help = {} # option_name -> help text
-		self.help.update(basic_help)
-		self.options = {} # option_name -> option_value
-		self.options.update(default_basic_options)
+		self.help = dict(basic_help) # option_name -> help text
+		self.options = dict(default_basic_options) # option_name -> option_value
+		self.meta = {}
+		self.meta_help = dict(meta_help)
 		self._set_default_options()
 		os.mkdir(self._filename())
 		self.save()
@@ -212,6 +239,35 @@ class Job(object):
 				return convert(option_name, value)
 		return str(value)
 
+	def set_meta(self, options):
+		"""Set metadata from options."""
+		for var in options:
+			value = options[var].strip()
+			if var not in meta_options:
+				continue
+			self.meta[var] = value
+		self.meta['name'] = self.meta.get('name') or self.name()
+		self.save()
+
+	def meta_ok(self, variable):
+		"""Tell if a given variable in metadata is well-formed."""
+		option_re = meta_options.get(variable, '^$')
+		value = self.meta.get(variable, '')
+		return bool(re.match(option_re, value))
+
+	def name(self):
+		"""Return job name."""
+		if self.meta.get('name'):
+			return self.meta['name']
+		dish_id = self.meta.get('dish_id', '')
+		treatments = self.meta.get('treatment', '').split(', ') or ['control']
+		tagged_locus_1 = self.meta.get('tagged_locus_1', '')
+		parts = filter(None, (dish_id, treatments[-1], tagged_locus_1))
+		name = '_'.join(parts)
+		name = re.sub(r'\s+', '_', name)
+		name = ''.join(re.findall(r'[A-Za-z0-9_-]+', name))
+		return name.lower()
+
 	def start(self):
 		"""Signal job to be ready for processing."""
 		self._set_path_options()
@@ -243,6 +299,7 @@ class Job(object):
 		log("Starting...")
 		self._run_processor()
 		self._run_postprocessing()
+		self._save_meta()
 		log("Done!")
 
 	def _run_processor(self):
@@ -263,6 +320,18 @@ class Job(object):
 		series = results.Series('.')
 		with RedirectStd('pt_distances.csv'):
 			format_results.print_pt_distances(series)
+
+	def _save_meta(self):
+		"""Save metadata in a convenient tabular format or two."""
+		# we are in Chdir(), hence no self._filename() stuff
+		log("Saving metadata...")
+		options = list(meta_options)
+		with open("meta.csv", "w") as fd:
+			fd.write("\t".join(options) + "\n")
+			fd.write("\t".join(self.meta.get(var, '') for var in options) + "\n")
+		with open("meta.txt", "w") as fd:
+			for var in options:
+				fd.write("{}: {}\n".format(var, self.meta.get(var, '-')))
 
 	def logfile(self):
 		"""Return lines of the logfile for the job."""
@@ -343,6 +412,7 @@ class Batch(Job):
 				if var in options_blacklist:
 					continue
 				job.options[var] = self.options[var]
+			job.meta = dict(self.meta)
 			job.save(set_state='started')
 
 	def run(self):

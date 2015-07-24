@@ -46,8 +46,30 @@ h2 {
 	font-size: 12pt;
 }
 
+div.input {
+	margin-top: 0.5ex;
+	white-space: -moz-nowrap; /* Firefox */
+	white-space: -o-nowrap; /* Opera */
+	white-space: nowrap; /* Chrome */
+}
+
 label, input, div.filename {
 	font-size: 12pt;
+	width: 50%;
+	display: inline-block;
+
+	word-wrap: break-word;
+	white-space: -moz-normal; /* Firefox */
+	white-space: -o-normal; /* Opera */
+	white-space: normal; /* Chrome */
+}
+
+label:before {
+	content: "> ";
+}
+
+input.error {
+	border: solid 2px red;
 }
 
 div.input input, div.input div.filename {

@@ -4,6 +4,24 @@
 <h2>Configure your job</h2>
 
 <form
+		action="{{url_for('setup')}}"
+		method="post">
+	<input type="hidden" name="id" value="{{job.id}}">
+
+	<h2>Metadata</h2>
+	{% for option in job.meta_help | sort %}
+		<div class="input">
+			<label for="{{option}}">{{job.meta_help[option]}}</label>
+			<input name="{{option}}" value="{{job.meta[option]}}"
+				{% if not job.meta_ok(option) %}class="error"{% endif %}
+				>
+		</div>
+	{% endfor %}
+
+	<input class="button" type="submit" name="meta" value="Set">
+</form>
+
+<form
 		class="basic"
 		action="{{url_for('setup')}}"
 		method="post">

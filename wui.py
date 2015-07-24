@@ -20,6 +20,8 @@ def setup():
 	job = Batch('client', request.values.get('id'), config=app.config)
 	if 'image' in request.files:
 		job.set_image(request.files.getlist('image'))
+	if 'meta' in request.values:
+		job.set_meta(request.values.to_dict())
 	if 'basic' in request.values:
 		job.set_basic(request.values.to_dict())
 	if 'advanced' in request.values:
