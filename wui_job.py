@@ -464,13 +464,23 @@ def run_one(prefix, id):
 	job.state = 'started'
 	job.run()
 
+def restart_jobs(config, ids):
+	for job in all_jobs(config):
+		if job.id in ids:
+			job.state = 'started' # XXX we bypass checks in job.save()
+			job.save()
+
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
 	parser.add_option('-j', '--job-prefix', help='Path to job folders')
 	parser.add_option('-r', '--run', help='Run one job and quit')
+	parser.add_option('-R', '--restart', action='store_true',
+		help='Reset the named jobs to "new" state')
 	options, args = parser.parse_args()
 	if options.run:
 		run_one(*os.path.split(options.run))
+	elif options.restart:
+		restart_jobs(dict(JOB_PREFIX=options.job_prefix), args)
 	else:
 		worker(dict(JOB_PREFIX=options.job_prefix))
 
