@@ -385,6 +385,8 @@ class Job(object):
 
 class Batch(Job):
 
+	log_lines = 10 # Lines of log of subjobs to display
+
 	def create(self):
 		self.job_ids = []
 		Job.create(self)
@@ -439,6 +441,13 @@ class Batch(Job):
 			for filename in job_results:
 				results[job.id + sep + filename] = job_results[filename]
 		return results
+
+	def logfile(self):
+		"""Return total log of all subjobs."""
+		for job in self.jobs():
+			yield '\n\nJob: {}\n'.format(job.id)
+			for line in list(job.logfile())[-self.log_lines:]:
+				yield line
 
 def worker(config):
 	"""Very stupid job processing without redis."""
