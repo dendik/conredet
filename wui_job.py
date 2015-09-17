@@ -40,8 +40,10 @@ options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
 	'out_stats', 'out_spots', 'out_distances') + outfile_options
 
 date_re = r'\d{4}-\d{2}-\d{2}'
-duration_re = r'\d(s|sec\w*|m|min\w*|h|hour|hr|d|day|w|week|month)'
-treatment_re = '{date_re} {duration_re} .*'.format(**vars())
+duration_re = r'\d(s|sec\w*|m|min\w*|h|hours?|hrs?|d|days?|w|weeks?|months?)'
+treatment_re = '{duration_re} .*'.format(**vars())
+meta_order = ('name', 'cell_culture', 'dish_id', 'preparation_date', 'hybridization_date',
+	'treatment')
 meta_options = {
 	'name': r'^.*$',
 	'cell_culture': r'^.+$',
@@ -54,12 +56,12 @@ meta_options = {
 	'tagged_locus_3': '^.*$',
 }
 meta_help = {
-	'name': 'Job name (folder name for files), optional. Default is {dish_id}_{last_treatment}_{tagged_locus_1}',
+	'name': 'Job name, optional. Default is {dish_id}_{last_treatment}_{tagged_locus_1}',
 	'cell_culture': 'Cell culture identification, e. g.: HeLa',
 	'dish_id': 'Freeform dish name before any treatment, optional. Should be the same dish for control and treated samples.',
 	'preparation_date': 'Fixed cells samples preparation date, required, e. g.: 1898-08-31',
 	'hybridization_date': 'Hybridization date, possibly empty, e. g.: 1898-08-31',
-	'treatment': 'Treatment applied; a possibly empty comma-separated list of: date duration description, e. g.: 2015-01-01 1hour etoposide, 2015-01-01 90min reparation',
+	'treatment': 'Treatment applied; a possibly empty comma-separated list of: duration description, e. g.: 1hour etoposide, 90min reparation',
 	'tagged_locus_1': 'Name of tagged locus (site, gene, territory) visible in color channel 1 (will be displayed red), e. g.: MLL1 or chr11',
 	'tagged_locus_2': 'Name of tagged locus (site, gene, territory) visible in color channel 2 (will be displayed green), e. g.: MLL1 or chr11',
 	'tagged_locus_3': 'Name of tagged locus (site, gene, territory) visible in color channel 3 (will be displayed blue), e. g.: MLL1 or chr11',
@@ -109,6 +111,7 @@ class Job(object):
 		self.options = dict(default_basic_options) # option_name -> option_value
 		self.meta = {}
 		self.meta_help = dict(meta_help)
+		self.meta_order = list(meta_order) + sorted(set(meta_help)-set(meta_order))
 		self._set_default_options()
 		os.mkdir(self._filename())
 		self.save()
