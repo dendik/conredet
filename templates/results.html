@@ -22,7 +22,13 @@
 
 	{% if job.is_done() %}
 		<h2>Job results</h2>
-		<a href="{{url_for('results', id=job.id, filename=job.name() + '.zip')}}">Download everything.zip</a>
+		Signal to pair and to territory distances:
+		<a href="{{url_for('results', id=job.id, filename='pt_distances.csv')}}">
+			pt_distances.csv</a>.
+		Download
+		<a href="{{url_for('results', id=job.id, filename=job.name() + '.zip')}}">
+			{{job.name()}}.zip</a>.
+		<p>All files:
 		<ul>
 			{% for filename in job.results() | sort %}
 				<li>
