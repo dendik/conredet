@@ -9,8 +9,9 @@ territory_color = 'red'
 
 class Series(object):
 
-	def __init__(self, prefix):
+	def __init__(self, prefix, label=None):
 		self.prefix = prefix
+		self.label = label or prefix
 		self.spots = {}
 		self.colors = set()
 		self.scale = None
