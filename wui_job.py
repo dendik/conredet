@@ -297,6 +297,7 @@ class Job(object):
 	def _run(self):
 		"""Assuming the environment is setup, run job steps."""
 		log("Starting...")
+		log("Options given:", self.options)
 		self._run_processor()
 		self._run_postprocessing()
 		self._save_meta()
@@ -319,6 +320,7 @@ class Job(object):
 		log("Postprocessing...")
 		series = results.Series('.')
 		with RedirectStd('pt_distances.csv'):
+			format_results.header = True # XXX KILL IT WITH PAIN
 			format_results.print_pt_distances(series)
 
 	def _save_meta(self):
@@ -411,7 +413,7 @@ class Batch(Job):
 		Job.start(self)
 		for job in self.jobs():
 			for var in self.options:
-				if var in options_blacklist:
+				if var in options_blacklist and not var in outfile_options:
 					continue
 				job.options[var] = self.options[var]
 			job.meta = dict(self.meta)
