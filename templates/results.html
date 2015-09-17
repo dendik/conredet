@@ -13,7 +13,7 @@
 		<ul>
 			{% for subjob in job.jobs() %}
 				<li>
-					<a href="{{url_for('results', id=subjob.id)}}">{{subjob.id}}</a>:
+					<a href="{{url_for('results', id=subjob.id)}}">{{subjob.name()}}</a>:
 					<span class="{{subjob.state}}">{{subjob.state}}</span>
 				</li>
 			{% endfor %}

@@ -321,7 +321,7 @@ class Job(object):
 		# we are in Chdir(), hence no self._filename() stuff
 		# This is bad since series names end up in the csv tables
 		log("Postprocessing...")
-		series = results.Series('.')
+		series = results.Series('.', self.name())
 		with RedirectStd('pt_distances.csv'):
 			format_results.header = True # XXX KILL IT WITH PAIN
 			format_results.print_pt_distances(series)
@@ -414,12 +414,13 @@ class Batch(Job):
 		"""Within ui. Configure each subjob. Set each subjob started."""
 		assert self.job_ids
 		Job.start(self)
-		for job in self.jobs():
+		for job_number, job in enumerate(self.jobs()):
 			for var in self.options:
 				if var in options_blacklist and not var in outfile_options:
 					continue
 				job.options[var] = self.options[var]
 			job.meta = dict(self.meta)
+			job.meta['name'] = '{}_{:02d}'.format(job.name(), job_number + 1)
 			job.save(set_state='started')
 
 	def run(self):
@@ -459,14 +460,14 @@ class Batch(Job):
 		for job in self.jobs():
 			job_results = job.results()
 			for filename in job_results:
-				results[job.meta['name'] + sep + filename] = job_results[filename]
+				results[job.name() + sep + filename] = job_results[filename]
 		results['pt_distances.csv'] = self._filename('pt_distances.csv')
 		return results
 
 	def logfile(self):
 		"""Return total log of all subjobs."""
 		for job in self.jobs():
-			yield '\n\nJob: {}\n'.format(job.id)
+			yield '\n\nJob: {}\n'.format(job.name())
 			for line in list(job.logfile())[-self.log_lines:]:
 				yield line
 
