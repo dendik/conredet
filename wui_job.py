@@ -428,7 +428,22 @@ class Batch(Job):
 			if job.state == 'error':
 				self.save(set_state='error')
 				return
+		self._run_postprocessing()
 		self.save(set_state='done')
+
+	def _run_postprocessing(self):
+		"""Generate useful aggregate tables."""
+		log("Postprocessing...")
+		with open(self._filename("pt_distances.csv"), "w") as ofd:
+			need_header = True
+			for job in self.jobs():
+				seen_header = False
+				with open(job.results()['pt_distances.csv']) as ifd:
+					for line in ifd:
+						if need_header or seen_header:
+							ofd.write(line)
+						need_header = False
+						seen_header = True
 
 	def jobs(self):
 		"""Iterate all jobs within batch."""
@@ -442,6 +457,7 @@ class Batch(Job):
 			job_results = job.results()
 			for filename in job_results:
 				results[job.id + sep + filename] = job_results[filename]
+		results['pt_distances.csv'] = self._filename('pt_distances.csv')
 		return results
 
 	def logfile(self):
