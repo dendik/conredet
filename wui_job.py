@@ -62,9 +62,9 @@ meta_help = {
 	'preparation_date': 'Fixed cells samples preparation date, required, e. g.: 1898-08-31',
 	'hybridization_date': 'Hybridization date, possibly empty, e. g.: 1898-08-31',
 	'treatment': 'Treatment applied; a possibly empty comma-separated list of: duration description, e. g.: 1hour etoposide, 90min reparation',
-	'tagged_locus_1': 'Name of tagged locus (site, gene, territory) visible in color channel 1 (will be displayed red), e. g.: MLL1 or chr11',
-	'tagged_locus_2': 'Name of tagged locus (site, gene, territory) visible in color channel 2 (will be displayed green), e. g.: MLL1 or chr11',
-	'tagged_locus_3': 'Name of tagged locus (site, gene, territory) visible in color channel 3 (will be displayed blue), e. g.: MLL1 or chr11',
+	'tagged_locus_1': 'Name of tagged locus (site, gene, territory) visible in color channel 1, e. g.: MLL1 or chr11',
+	'tagged_locus_2': 'Name of tagged locus (site, gene, territory) visible in color channel 2, e. g.: MLL1 or chr11',
+	'tagged_locus_3': 'Name of tagged locus (site, gene, territory) visible in color channel 3, e. g.: MLL1 or chr11',
 }
 
 known_extensions = ('nd2', 'czi')
