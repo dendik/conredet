@@ -459,7 +459,7 @@ class Batch(Job):
 		for job in self.jobs():
 			job_results = job.results()
 			for filename in job_results:
-				results[job.id + sep + filename] = job_results[filename]
+				results[job.meta['name'] + sep + filename] = job_results[filename]
 		results['pt_distances.csv'] = self._filename('pt_distances.csv')
 		return results
 

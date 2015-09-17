@@ -24,11 +24,11 @@ def print_good_cells(series):
 	series.mark_good()
 	for cell in series.sorted_cells():
 		if cell.good:
-			print series.prefix, cell
+			print series.label, cell
 
 def print_good_coords(series):
 	series.mark_good()
-	print_header("prefix dx dy dz distance c-t1-t2-angle t1-c-t2-angle")
+	print_header("label dx dy dz distance c-t1-t2-angle t1-c-t2-angle")
 	for spot in series.sorted_cells():
 		if not spot.good:
 			continue
@@ -41,51 +41,51 @@ def print_good_coords(series):
 		distance = np.linalg.norm(ab)
 		angle = acos(np.vdot(ab, ac) / np.linalg.norm(ab) / np.linalg.norm(ac))
 		angle2 = acos(np.vdot(bc, ac) / np.linalg.norm(bc) / np.linalg.norm(ac))
-		print series.prefix,
+		print series.label,
 		print " ".join(map(str, list(ab) + [distance, angle, angle2])),
 		print "#", spot,
 		print a, b, c,
 		print ab, ac
 
 def print_with_prefix(series):
-	print_header('prefix cell_number cell_size spot_color spot_number x y z')
+	print_header('label cell_number cell_size spot_color spot_number x y z')
 	for cell in series.sorted_cells:
 		for spot in cell.overlaps:
-			print series.prefix, cell.number, cell.sizes[0],
+			print series.label, cell.number, cell.sizes[0],
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 def print_distances(series):
-	print_header('prefix spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size o_distance r_distance territory_occupancy')
+	print_header('label spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size o_distance r_distance territory_occupancy')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
 		territory_size = spot.cell.sum_size(territory_color)
-		print series.prefix, spot.number, spot.color, spot.sizes[0],
+		print series.label, spot.number, spot.color, spot.sizes[0],
 		print other.color, other.sizes[0], spot.occupancies[0, other.color],
 		print territory_color, territory_size, spot.o_distances[territory_color],
 		print spot.r_distances[territory_color], spot.occupancies[0, territory_color]
 
 def print_pt_distances(series):
-	print_header('prefix cell_number spot1_color spot1_number spot1_volume'
+	print_header('label cell_number spot1_color spot1_number spot1_volume'
 		' spot2_color spot2_number spot2_volume spot_distance spot_overlap'
 		' territory_distance territory_overlap')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
-		print series.prefix, spot.cell.number,
+		print series.label, spot.cell.number,
 		print spot.color, spot.number, spot.sizes[0],
 		print other.color, other.number, other.sizes[0],
 		print spot.distance(other), spot.occupancies[0, other.color],
 		print spot.o_distances[territory_color], spot.occupancies[0, territory_color]
 
 def print_cell_distances(series):
-	print_header('prefix cell_number spot_number spot_color spot_size distance')
+	print_header('label cell_number spot_number spot_color spot_size distance')
 	for cell in series.sorted_cells():
 		for spot in cell.overlaps:
 			d = (cell.center - spot.center)
-			print series.prefix, cell.number, spot.number, spot.color, spot.sizes[0],
+			print series.label, cell.number, spot.number, spot.color, spot.sizes[0],
 			print d.dot(d) ** 0.5
 
-def print_series(prefix):
-	series = results.Series(prefix)
+def print_series(prefix, label=None):
+	series = results.Series(prefix, label)
 
 	for function_name, function in globals().items():
 		if not function_name.startswith('print_'):
@@ -118,4 +118,8 @@ if __name__ == "__main__":
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 	for prefix in args:
-		print_series(prefix)
+		if '=' in prefix:
+			prefix, label = prefix.split('=')
+			print_series(prefix, label)
+		else:
+			print_series(prefix)
