@@ -9,7 +9,7 @@
 	<input type="hidden" name="id" value="{{job.id}}">
 
 	<h2>Metadata</h2>
-	{% for option in job.meta_help | sort %}
+	{% for option in job.meta_order %}
 		<div class="input">
 			<label for="{{option}}">{{job.meta_help[option]}}</label>
 			<input name="{{option}}" value="{{job.meta[option]}}"
