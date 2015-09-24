@@ -2,6 +2,7 @@ from os.path import join, exists
 from utils import log, Struct
 import numpy as np
 import csv
+from collections import defaultdict
 
 verbose = False
 cell_color = 'red2'
@@ -131,10 +132,10 @@ class Spot(object):
 		self.number = number
 		self.series.colors.add(self.color)
 		self.sizes = {}
-		self.occupancies = {}
+		self.occupancies = defaultdict(float)
 		self.overlaps = set()
-		self.o_distances = {}
-		self.r_distances = {}
+		self.o_distances = defaultdict(lambda: float('inf'))
+		self.r_distances = defaultdict(lambda: float('inf'))
 
 	def set_coords(self, coords):
 		self.coords = tuple(float(v) for v in coords)
