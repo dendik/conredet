@@ -425,13 +425,11 @@ class Batch(Job):
 
 	def run(self):
 		"""Within worker. If all jobs are done, we are done too."""
-		for job in self.jobs():
-			if job.state == 'started':
-				return
-		for job in self.jobs():
-			if job.state == 'error':
-				self.save(set_state='error')
-				return
+		if any(self.jobs(state='started')):
+			return
+		if not any(self.jobs(state='done')):
+			self.save(set_state='error')
+			return
 		self._run_postprocessing()
 		self.save(set_state='done')
 
@@ -440,7 +438,7 @@ class Batch(Job):
 		log("Postprocessing...")
 		with open(self._filename("pt_distances.csv"), "w") as ofd:
 			need_header = True
-			for job in self.jobs():
+			for job in self.jobs(state='done'):
 				seen_header = False
 				with open(job.results()['pt_distances.csv']) as ifd:
 					for line in ifd:
@@ -449,15 +447,22 @@ class Batch(Job):
 						need_header = False
 						seen_header = True
 
-	def jobs(self):
-		"""Iterate all jobs within batch."""
+	def jobs(self, state=None):
+		"""Iterate all jobs within batch.
+		
+		`state` is either string or iterable of strings. Yield only
+		jobs matching `state`.
+		"""
 		for id in self.job_ids:
-			yield Job(self.role, id=id, config=self.config)
+			job = Job(self.role, id=id, config=self.config)
+			if state and job.state not in state:
+				continue
+			yield job
 
 	def results(self, sep='-'):
 		"""Within ui. Return all files of all jobs."""
 		results = {}
-		for job in self.jobs():
+		for job in self.jobs(state='done'):
 			job_results = job.results()
 			for filename in job_results:
 				results[job.name() + sep + filename] = job_results[filename]
