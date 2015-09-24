@@ -22,12 +22,16 @@
 
 	{% if job.is_done() %}
 		<h2>Job results</h2>
-		Signal to pair and to territory distances:
+
+		<p>Signal to pair and to territory distances:
 		<a href="{{url_for('results', id=job.id, filename='pt_distances.csv')}}">
 			pt_distances.csv</a>.
-		Download
+			Help reading the data: <a href="#explanation">explanation below</a>.
+
+		<p>Download everything:
 		<a href="{{url_for('results', id=job.id, filename=job.name() + '.zip')}}">
 			{{job.name()}}.zip</a>.
+
 		<p>All files:
 		<ul>
 			{% for filename in job.results() | sort %}
@@ -39,7 +43,7 @@
 			{% endfor %}
 		</ul>
 
-		<h2>Explanation</h2>
+		<h2 id="explanation">Explanation</h2>
 
 		<p>Fields in CSV files have the following meanings:</p>
 		<dl>
