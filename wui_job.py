@@ -484,6 +484,7 @@ def worker(config):
 			if job.state == 'started':
 				log("Starting job", job.id)
 				job.run()
+				log("Job", job.id, "is now", job.state)
 
 def all_jobs(config):
 	"""Return a list of all available jobs."""
