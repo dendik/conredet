@@ -3,6 +3,7 @@ import sys
 import time
 import functools
 import inspect
+from multiprocessing import Process
 
 def log(*args):
 	args = (time.strftime("[%F %T]"),) + args
@@ -33,6 +34,14 @@ def ifverbose(function):
 	def result(*args, **kwargs):
 		if caller_globals['options'].verbose:
 			return function(*args, **kwargs)
+	return result
+
+def with_fork(function):
+	@functools.wraps(function)
+	def result(*args, **kwargs):
+		process = Process(target=function, args=args, kwargs=kwargs)
+		process.start()
+		process.join()
 	return result
 
 def roundint(value):
