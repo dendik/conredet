@@ -8,7 +8,6 @@ May switch to Redis someday.
 import os
 import re
 from uuid import uuid4
-from multiprocessing import Process
 import pickle
 import time
 import traceback
@@ -19,7 +18,7 @@ import processor
 import results
 import format_results
 from wui_helpers import RedirectStd, Chdir, Struct
-from utils import log
+from utils import log, with_fork
 
 wipe_multiplier = 1.2
 worker_sleep = 10 # seconds between job attempts
@@ -307,6 +306,7 @@ class Job(object):
 		self._save_meta()
 		log("Done!")
 
+	@with_fork
 	def _run_processor(self):
 		"""Run the required function from processor to run the jub."""
 		options = Struct()
@@ -482,10 +482,9 @@ def worker(config):
 	while True:
 		time.sleep(worker_sleep)
 		for job in all_jobs(config):
-			worker = Process(target=work_one, args=(job,))
-			worker.start()
-			worker.join()
+			work_one(job)
 
+@with_fork
 def work_one(job):
 	"""Run one job for worker."""
 	if job.state == 'started':
