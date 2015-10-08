@@ -514,10 +514,31 @@ def restart_jobs(config, ids):
 			job.state = 'started' # XXX we bypass checks in job.save()
 			job.save()
 
+def join_batch(config, ids):
+	children = [job
+		for job in all_jobs(config)
+		if job.id in ids
+	]
+	job = Batch(role='client', config=config)
+	job.job_ids = ids
+	job.meta = dict(children[0].meta)
+	del job.meta['name']
+	Job.start(job)
+	print 'Started', job.id
+
+def list_jobs(config):
+	job_name = lambda job: hasattr(job, 'meta') and job.name()
+	for job in sorted(all_jobs(config), key=job_name):
+		print job.id, job.name()
+
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
 	parser.add_option('-j', '--job-prefix', help='Path to job folders')
 	parser.add_option('-r', '--run', help='Run one job and quit')
+	parser.add_option('-l', '--list', action='store_true',
+		help='List existing jobs')
+	parser.add_option('-b', '--join-batch', action='store_true',
+		help='Join multiple jobs into batch')
 	parser.add_option('-R', '--restart', action='store_true',
 		help='Reset the named jobs to "new" state')
 	options, args = parser.parse_args()
@@ -525,6 +546,10 @@ if __name__ == "__main__":
 		run_one(*os.path.split(options.run))
 	elif options.restart:
 		restart_jobs(dict(JOB_PREFIX=options.job_prefix), args)
+	elif options.join_batch:
+		join_batch(dict(JOB_PREFIX=options.job_prefix), args)
+	elif options.list:
+		list_jobs(dict(JOB_PREFIX=options.job_prefix))
 	else:
 		worker(dict(JOB_PREFIX=options.job_prefix))
 
