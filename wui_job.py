@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """Very stupid job processing.
 
 This currently uses pickle to store data & options, folders for larger data
