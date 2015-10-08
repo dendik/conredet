@@ -8,15 +8,16 @@ May switch to Redis someday.
 import os
 import re
 from uuid import uuid4
+from multiprocessing import Process
 import pickle
 import time
+import traceback
+from StringIO import StringIO
+from zipfile import ZipFile
 import optparse
 import processor
 import results
 import format_results
-import traceback
-from StringIO import StringIO
-from zipfile import ZipFile
 from wui_helpers import RedirectStd, Chdir, Struct
 from utils import log
 
@@ -481,10 +482,16 @@ def worker(config):
 	while True:
 		time.sleep(worker_sleep)
 		for job in all_jobs(config):
-			if job.state == 'started':
-				log("Starting job", job.id)
-				job.run()
-				log("Job", job.id, "is now", job.state)
+			worker = Process(target=work_one, args=(job,))
+			worker.start()
+			worker.join()
+
+def work_one(job):
+	"""Run one job for worker."""
+	if job.state == 'started':
+		log("Starting job", job.id)
+		job.run()
+		log("Job", job.id, "is now", job.state)
 
 def all_jobs(config):
 	"""Return a list of all available jobs."""
