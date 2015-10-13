@@ -11,6 +11,7 @@ import re
 from uuid import uuid4
 import pickle
 import time
+from datetime import datetime
 import traceback
 from StringIO import StringIO
 from zipfile import ZipFile
@@ -530,7 +531,9 @@ def join_batch(config, ids):
 def list_jobs(config):
 	job_name = lambda job: hasattr(job, 'meta') and job.name()
 	for job in sorted(all_jobs(config), key=job_name):
-		print job.id, job.name()
+		mtime = datetime.fromtimestamp(os.path.getmtime(job._filename()))
+		t = job.__class__.__name__[0]
+		print "{} {:%F %T} {} {:7} {}".format(job.id, mtime, t, job.state, job.name())
 
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
