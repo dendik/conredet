@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from flask import Flask, render_template, request, send_file
 from flask import redirect, url_for
 from wui_helpers import ConfigObject
