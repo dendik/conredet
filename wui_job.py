@@ -97,7 +97,7 @@ class Job(object):
 	"""
 
 	def __init__(self, role, id=None, config=None):
-		assert role in known_roles
+		assert role in known_roles, "Unknown connection type (neither client, nor worker)"
 		self.role = role
 		self.config = config
 		if id is None:
@@ -145,7 +145,7 @@ class Job(object):
 			* Worker may set done flag upon saving (only once, obviously).
 		"""
 		if self.role == 'client':
-			assert self.state == 'new'
+			assert self.state == 'new', "Job is already started"
 		if self.role == 'worker':
 			assert self.state == 'started'
 		if set_state:
@@ -202,14 +202,14 @@ class Job(object):
 				del options[option]
 				continue
 			if option == 'cell_channel':
-				assert options[option] in known_colors
+				assert_color(options[option])
 			else:
 				options[option] = int(options[option])
 		self.options.update(options)
 
 	def _set_basic_cell_channel(self, color):
 		"""Assign advanced options from basic cell* options."""
-		assert color in known_colors
+		assert_color(color)
 		radius = int(self.options['cell_radius'])
 		self.options[color + '_role'] = 'territory'
 		self.options[color + '2_role'] = 'core'
@@ -403,21 +403,21 @@ class Batch(Job):
 
 	def set_image(self, files):
 		"""Create a new job for each image file uploaded."""
-		assert not self.job_ids
-		assert files
+		assert not self.job_ids, "Images already selected. To add more images please start a new job."
+		assert files, "Please supply at least one image."
 		for file in files:
 			job = Job(self.role, config=self.config)
 			job.set_image(file)
 			job.save()
 			self.job_ids.append(job.id)
-		assert self.job_ids
-		assert len(self.job_ids) == len(files)
+		assert self.job_ids, "Weirdly, no subjobs created."
+		assert len(self.job_ids) == len(files), "Weirdly, wrong number of subjobs created."
 		self.save()
-		assert self.job_ids
+		assert self.job_ids, "Weirly, could not save subjobs."
 
 	def start(self):
 		"""Within ui. Configure each subjob. Set each subjob started."""
-		assert self.job_ids
+		assert self.job_ids, "Can not start job without images."
 		Job.start(self)
 		for job_number, job in enumerate(self.jobs()):
 			for var in self.options:
@@ -508,7 +508,7 @@ def all_jobs(config):
 
 def run_one(prefix, id):
 	job = Job('worker', id, config=dict(JOB_PREFIX=prefix))
-	assert job.state != 'started'
+	assert job.state != 'started', "The job is already running."
 	job.state = 'started'
 	job.run()
 
@@ -536,6 +536,11 @@ def list_jobs(config):
 		t = job.__class__.__name__[0]
 		print "{} {:%F %T} {} {:7} {}".format(
 			job.id, job.started, t, job.state, job.name())
+
+def assert_color(color):
+	assert options[option] in known_colors, (
+		"Unknown channel name {}".format(options[option])
+	)
 
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
