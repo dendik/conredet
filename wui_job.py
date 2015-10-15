@@ -109,6 +109,7 @@ class Job(object):
 		"""Create a new empty job with unique id."""
 		self.id = str(uuid4())
 		self.state = 'new'
+		self.started = datetime.now()
 		self.help = dict(basic_help) # option_name -> help text
 		self.options = dict(default_basic_options) # option_name -> option_value
 		self.meta = {}
@@ -125,6 +126,7 @@ class Job(object):
 		(I.e. change class of self to that of the loaded job)
 		"""
 		self.id = id
+		self.started = datetime.fromtimestamp(os.path.getctime(self._filename()))
 		role = self.role
 		with open(self._filename(job_filename), 'rb') as fd:
 			loaded = pickle.load(fd)
@@ -530,10 +532,10 @@ def join_batch(config, ids):
 
 def list_jobs(config):
 	job_name = lambda job: hasattr(job, 'meta') and job.name()
-	for job in sorted(all_jobs(config), key=job_name):
-		mtime = datetime.fromtimestamp(os.path.getmtime(job._filename()))
+	for job in sorted(all_jobs(config), key=lambda job: job.started):
 		t = job.__class__.__name__[0]
-		print "{} {:%F %T} {} {:7} {}".format(job.id, mtime, t, job.state, job.name())
+		print "{} {:%F %T} {} {:7} {}".format(
+			job.id, job.started, t, job.state, job.name())
 
 if __name__ == "__main__":
 	parser = optparse.OptionParser()
