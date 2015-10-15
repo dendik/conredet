@@ -483,10 +483,9 @@ class Batch(Job):
 
 def worker(config):
 	"""Very stupid job processing without redis."""
-	job_name = lambda job: hasattr(job, 'meta') and job.name()
 	while True:
 		time.sleep(worker_sleep)
-		for job in sorted(all_jobs(config), key=job_name):
+		for job in sorted(all_jobs(config), key=lambda job: job.started):
 			work_one(job)
 
 @with_fork
