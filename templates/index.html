@@ -41,7 +41,7 @@ configuration page once upload is completed.</p>
 		<tr>
 			<td><a href="{{url_for('results', id=job.id)}}">
 				{{job.started|replace(" ", "_")}}</a></td>
-			<td>{{job.state}}</td>
+			<td class="{{job.state}}">{{job.state}}</td>
 			<td>{{job.name()}}</td>
 		</tr>
 	{% endfor %}
