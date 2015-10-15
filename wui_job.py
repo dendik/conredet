@@ -530,11 +530,12 @@ def join_batch(config, ids):
 	print 'Started', job.id
 
 def list_jobs(config):
-	job_name = lambda job: hasattr(job, 'meta') and job.name()
 	for job in sorted(all_jobs(config), key=lambda job: job.started):
-		t = job.__class__.__name__[0]
-		print "{} {:%F %T} {} {:7} {}".format(
-			job.id, job.started, t, job.state, job.name())
+		job_type = job.__class__.__name__[0]
+		job_state = job.state[0].upper()
+		job.flags = job_type + job_state
+		job._name = job.name()
+		print "{id} {started:%F %T} [{flags}] {_name}".format(**vars(job))
 
 def assert_color(color):
 	assert options[option] in known_colors, (
