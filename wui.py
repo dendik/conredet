@@ -2,7 +2,7 @@
 from flask import Flask, render_template, request, send_file
 from flask import redirect, url_for
 from wui_helpers import ConfigObject
-from wui_job import Job, Batch
+from wui_job import Job, Batch, all_jobs
 
 class config(object):
 	JOB_PREFIX = 'jobs'
@@ -14,7 +14,9 @@ app.config.from_object('wui.config')
 
 @app.route("/")
 def index():
-	return render_template("index.html")
+	jobs = sorted(all_jobs(app.config), key=lambda job: job.started)
+	jobs = [job for job in reversed(jobs) if isinstance(job, Batch)]
+	return render_template("index.html", jobs=jobs[:10])
 
 @app.route("/setup", methods=["POST"])
 def setup():

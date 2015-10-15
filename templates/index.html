@@ -33,4 +33,18 @@ configuration page once upload is completed.</p>
 </form>
 
 <p>The program currently accepts nd2 and czi image formats.</p>
+
+<h2>Recent jobs</h2>
+
+<table>
+	{% for job in jobs %}
+		<tr>
+			<td><a href="{{url_for('results', id=job.id)}}">
+				{{job.started|replace(" ", "_")}}</a></td>
+			<td>{{job.state}}</td>
+			<td>{{job.name()}}</td>
+		</tr>
+	{% endfor %}
+</table>
+
 {% endblock %}
