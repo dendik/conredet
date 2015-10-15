@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import optparse
 import results
 import numpy as np
