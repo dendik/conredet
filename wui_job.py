@@ -254,6 +254,7 @@ class Job(object):
 				continue
 			self.meta[var] = value
 		self.meta['name'] = self.meta.get('name') or self.name()
+		self.meta['filename'] = self.image_filename
 		self.save()
 
 	def meta_ok(self, variable):
@@ -334,7 +335,7 @@ class Job(object):
 		"""Save metadata in a convenient tabular format or two."""
 		# we are in Chdir(), hence no self._filename() stuff
 		log("Saving metadata...")
-		options = list(meta_options)
+		options = list(meta_options) + list(set(self.meta) - set(meta_options))
 		with open("meta.csv", "w") as fd:
 			fd.write("\t".join(options) + "\n")
 			fd.write("\t".join(self.meta.get(var, '') for var in options) + "\n")
