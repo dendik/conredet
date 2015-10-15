@@ -15,7 +15,8 @@ app.config.from_object('wui.config')
 @app.route("/")
 def index():
 	jobs = sorted(all_jobs(app.config), key=lambda job: job.started)
-	jobs = [job for job in reversed(jobs) if isinstance(job, Batch)]
+	jobs = [job for job in reversed(jobs)
+		if isinstance(job, Batch) and job.state != 'new']
 	return render_template("index.html", jobs=jobs[:10])
 
 @app.route("/setup", methods=["POST"])
