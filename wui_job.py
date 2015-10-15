@@ -310,7 +310,6 @@ class Job(object):
 		self._save_meta()
 		log("Done!")
 
-	@with_fork
 	def _run_processor(self):
 		"""Run the required function from processor to run the jub."""
 		options = Struct()
