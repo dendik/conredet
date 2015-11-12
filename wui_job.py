@@ -177,7 +177,7 @@ class Job(object):
 			if file.filename.endswith('.' + extension):
 				self.options[option] = filename # this will run with chdir
 				file.save(self._filename(filename))
-				self.image_filename = file.filename # for ui goodness
+				self.meta['filename'] = file.filename # for ui goodness
 		self.save()
 
 	def set_basic(self, options):
@@ -254,7 +254,6 @@ class Job(object):
 				continue
 			self.meta[var] = value
 		self.meta['name'] = self.meta.get('name') or self.name()
-		self.meta['filename'] = self.image_filename
 		self.save()
 
 	def meta_ok(self, variable):
