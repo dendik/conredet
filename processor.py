@@ -6,6 +6,7 @@ import sys
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
+import tifffile
 
 from analyze import Images, Spots
 from utils import log, log_dict, logging, ifverbose, roundint, Re, dict_path
@@ -133,6 +134,8 @@ def load_images():
 		images = load_czi_images(options.czi_images)
 	elif options.nd2_images:
 		images = load_nd2_images(options.nd2_images)
+	elif options.lsm_images:
+		images = load_lsm_images(options.lsm_images)
 	return images
 
 @logging
@@ -150,14 +153,14 @@ def load_czi_images(filename):
 		images = Images()
 		universe = czi.asarray()
 		## XXX: we just hope that contrast is always channel 2... :-/
-		r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)]
+		r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)] # XXX, see #11
 		images.from_cubes([r, g, b])
 		load_czi_metadata(images, czi)
 		return images
 
 def load_czi_metadata(images, czi):
 	channels = czi.metadata.findall(".//ExcitationWavelength")
-	r, p, g, b = [float(channel.text) for channel in channels]
+	r, p, g, b = [float(channel.text) for channel in channels] # XXX, see #11
 	images.wavelengths = (r, g, b)
 	images.scales = tuple(
 		10**9 * float(czi.metadata.findall(".//Scaling" + coord)[0].text)
@@ -172,7 +175,7 @@ def load_nd2_images(filename):
 		data = (np.array(data) >> 4).astype('uint8')
 		data = data.reshape((nd2.Z, data.shape[1], nd2.H, nd2.W))
 		## XXX: hopefully, contrast is always channel 4 or absent
-		g, b, r = [data[:, n, :, :] for n in range(3)]
+		g, b, r = [data[:, n, :, :] for n in range(3)] # XXX, see #11
 		images = Images()
 		images.from_cubes([r, g, b])
 		load_nd2_metadata(nd2, images)
@@ -190,8 +193,8 @@ def open_nd2(file):
 	return nd2
 
 def load_nd2_metadata(nd2, images):
-	g, b, r, _ = nd2_wavelengths(nd2)
-	images.wavelengths = tuple(map(float, (r, g, b)))
+	g, b, r, _ = nd2_wavelengths(nd2) # XXX, see #11
+	images.wavelengths = tuple(map(float, (r, g, b))) # XXX, see #11
 	images.scales = (
 		nd2.scalez * 1000,
 		nd2.scalexy * 1000,
@@ -204,7 +207,36 @@ def nd2_wavelengths(nd2):
 		'/m_pFilter//m_ExcitationSpectrum/pPoint/Point0/dWavelength'
 	)
 	return [dict_path(nd2.meta, path.format(c))
-		for c in ('a0', 'a1', 'a2', 'a3')]
+		for c in ('a0', 'a1', 'a2', 'a3')] # XXX, see #11
+
+@logging
+def load_lsm_images(filename):
+	lsm = tifffile.TIFFfile(filename)
+	meta_page, = (page for page in lsm.pages if page.is_lsm)
+	meta = meta_page.cz_lsm_scan_info
+	data = [page.asarray() for page in lsm.series[0].pages]
+	g, b, r = np.array(data).swapaxes(0, 1) # XXX, see #11
+	images = Images().from_cubes([r, g, b])
+	images.wavelengths = lsm_wavelengths(meta)
+	images.scales = lsm_scales(meta)
+	assert len(images.scales) == 3
+	return images
+
+def lsm_wavelengths(meta_page):
+	g, b, r = ( # XXX, see #11
+		channel['wavelength']
+		for track in meta_page['tracks']
+		for channel in track['illumination_channels']
+		if channel.get('acquire', channel.get('aquire'))
+	)
+	return r, g, b
+
+def lsm_scales(meta_page):
+	return (
+		meta_page['plane_spacing'] * 1000,
+		meta_page['sample_spacing'] * 1000, # or plane_height / images_height
+		meta_page['line_spacing'] * 1000, # or plane_width / images_width
+	)
 
 # --------------------------------------------------
 # Preprocessing
@@ -581,6 +613,7 @@ def option_parser():
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-n", "--nd2-images", help="nd2 file with images")
+	p.add_option("-l", "--lsm-images", help="lsm file with images")
 	p.add_option("-S", "--out-scale", help="file with scale & wavelength metadata")
 	p.add_option("-1", "--out-signals", help="file with per-signal data")
 	p.add_option("-2", "--out-pairs", help="file with per-pair data")

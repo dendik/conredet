@@ -488,7 +488,7 @@ class Images(object):
 
 	def from_cubes(self, cubes=None):
 		"""Create image stack for three color cubes."""
-		if cubes:
+		if cubes is not None:
 			self.cubes = cubes
 		assert all(cube.dtype == "uint8" for cube in self.cubes)
 		assert all(cube.shape == self.cubes[0].shape for cube in self.cubes)

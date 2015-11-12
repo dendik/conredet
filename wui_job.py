@@ -38,7 +38,8 @@ basic_help = dict(
 )
 
 outfile_options = ('out_scale', 'out_signals', 'out_pairs')
-options_blacklist = (None, 'images', 'czi_images', 'nd2_images',
+options_blacklist = (None,
+	'images', 'czi_images', 'lsm_images', 'nd2_images'
 	'out_stats', 'out_spots', 'out_distances') + outfile_options
 
 date_re = r'\d{4}-\d{2}-\d{2}'
@@ -69,7 +70,7 @@ meta_help = {
 	'tagged_locus_3': 'Name of tagged locus (site, gene, territory) visible in color channel 3, e. g.: MLL1 or chr11',
 }
 
-known_extensions = ('nd2', 'czi')
+known_extensions = ('czi', 'lsm', 'nd2')
 known_colors = ('red', 'green', 'blue')
 known_roles = ('client', 'worker')
 job_filename = 'job.pickle'
