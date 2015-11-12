@@ -423,7 +423,7 @@ class Batch(Job):
 				if var in options_blacklist and not var in outfile_options:
 					continue
 				job.options[var] = self.options[var]
-			job.meta = dict(self.meta)
+			job.meta.update(dict(self.meta))
 			job.meta['name'] = '{}_{:02d}'.format(job.name(), job_number + 1)
 			job.save(set_state='started')
 
