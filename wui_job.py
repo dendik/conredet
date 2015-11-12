@@ -537,8 +537,8 @@ def list_jobs(config):
 		print "{id} {started:%F %T} [{flags}] {_name}".format(**vars(job))
 
 def assert_color(color):
-	assert options[option] in known_colors, (
-		"Unknown channel name {}".format(options[option])
+	assert color in known_colors, (
+		"Unknown channel name {}".format(color)
 	)
 
 if __name__ == "__main__":
