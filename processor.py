@@ -140,6 +140,7 @@ def load_images():
 
 @logging
 def load_glob_images(filename):
+	assert options.channels == 'rgb', "Channel ordering unsupported in RGB images"
 	images = Images(glob.glob(filename))
 	images.assign_cubes()
 	images.wavelengths = None
@@ -152,16 +153,19 @@ def load_czi_images(filename):
 	with czifile.CziFile(filename) as czi:
 		images = Images()
 		universe = czi.asarray()
-		## XXX: we just hope that contrast is always channel 2... :-/
-		r, p, g, b = [universe[j,0,:,:,:,0] for j in range(4)] # XXX, see #11
-		images.from_cubes([r, g, b])
+		channels = {}
+		for j, name in enumerate(options.channels):
+			channels[name] = universe[j,0,:,:,:,0]
+		images.from_cubes([channels['r'], channels['g'], channels['b']])
 		load_czi_metadata(images, czi)
 		return images
 
 def load_czi_metadata(images, czi):
-	channels = czi.metadata.findall(".//ExcitationWavelength")
-	r, p, g, b = [float(channel.text) for channel in channels] # XXX, see #11
-	images.wavelengths = (r, g, b)
+	wavelengths = czi.metadata.findall(".//ExcitationWavelength")
+	channels = {}
+	for name, value in zip(options.channels, wavelengths):
+		channels[name] = float(value)
+	images.wavelengths = (channels['r'], channels['g'], channels['b'])
 	images.scales = tuple(
 		10**9 * float(czi.metadata.findall(".//Scaling" + coord)[0].text)
 		for coord in "ZYX"
@@ -174,10 +178,11 @@ def load_nd2_images(filename):
 		data = [nd2.get_image(n)[1:] for n in range(nd2.Z)]
 		data = (np.array(data) >> 4).astype('uint8')
 		data = data.reshape((nd2.Z, data.shape[1], nd2.H, nd2.W))
-		## XXX: hopefully, contrast is always channel 4 or absent
-		g, b, r = [data[:, n, :, :] for n in range(3)] # XXX, see #11
+		channels = {}
+		for n, channel in enumerate(options.channels):
+			channels[channel] = data[:, n, :, :]
 		images = Images()
-		images.from_cubes([r, g, b])
+		images.from_cubes([channels['r'], channels['g'], channels['b']])
 		load_nd2_metadata(nd2, images)
 	return images
 
@@ -193,8 +198,7 @@ def open_nd2(file):
 	return nd2
 
 def load_nd2_metadata(nd2, images):
-	g, b, r, _ = nd2_wavelengths(nd2) # XXX, see #11
-	images.wavelengths = tuple(map(float, (r, g, b))) # XXX, see #11
+	images.wavelengths = nd2_wavelengths(nd2)
 	images.scales = (
 		nd2.scalez * 1000,
 		nd2.scalexy * 1000,
@@ -202,12 +206,12 @@ def load_nd2_metadata(nd2, images):
 	)
 
 def nd2_wavelengths(nd2):
-	path = (
-		'SLxPictureMetadata/sPicturePlanes/sPlane/{}/pFilterPath'
-		'/m_pFilter//m_ExcitationSpectrum/pPoint/Point0/dWavelength'
-	)
-	return [dict_path(nd2.meta, path.format(c))
-		for c in ('a0', 'a1', 'a2', 'a3')] # XXX, see #11
+	planes = dict_path(nd2.meta, 'SLxPictureMetadata/sPicturePlanes/sPlane')
+	tail = 'pFilterPath/m_pFilter//m_ExcitationSpectrum/pPoint/Point0/dWavelength'
+	wavelengths = {}
+	for name, plane in zip(options.channels, sorted(planes)):
+		wavelengths[name] = float(dict_path(planes[plane], tail))
+	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
 @logging
 def load_lsm_images(filename):
@@ -215,21 +219,22 @@ def load_lsm_images(filename):
 	meta_page, = (page for page in lsm.pages if page.is_lsm)
 	meta = meta_page.cz_lsm_scan_info
 	data = [page.asarray() for page in lsm.series[0].pages]
-	g, b, r = np.array(data).swapaxes(0, 1) # XXX, see #11
-	images = Images().from_cubes([r, g, b])
+	data = np.array(data).swapaxes(0, 1)
+	channels = dict(zip(options.channels, data))
+	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
 	images.wavelengths = lsm_wavelengths(meta)
 	images.scales = lsm_scales(meta)
-	assert len(images.scales) == 3
 	return images
 
 def lsm_wavelengths(meta_page):
-	g, b, r = ( # XXX, see #11
+	wavelengths = (
 		channel['wavelength']
 		for track in meta_page['tracks']
 		for channel in track['illumination_channels']
 		if channel.get('acquire', channel.get('aquire'))
 	)
-	return r, g, b
+	wavelengths = dict(zip(options.channels, wavelengths))
+	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
 def lsm_scales(meta_page):
 	return (
@@ -614,6 +619,8 @@ def option_parser():
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-n", "--nd2-images", help="nd2 file with images")
 	p.add_option("-l", "--lsm-images", help="lsm file with images")
+	p.add_option("-c", "--channels", default="rgb",
+		help="specify order in which image channels are used, - for not used")
 	p.add_option("-S", "--out-scale", help="file with scale & wavelength metadata")
 	p.add_option("-1", "--out-signals", help="file with per-signal data")
 	p.add_option("-2", "--out-pairs", help="file with per-pair data")
