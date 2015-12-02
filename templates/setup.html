@@ -31,7 +31,7 @@
 	<p>You will most likely need to change these, but it may make sense to make
 	the first run with the defaults.</p>
 
-	{% for option in ['n_cells', 'cell_radius', 'cell_channel',
+	{% for option in ['channels', 'n_cells', 'cell_radius', 'cell_channel',
 		'red_volume', 'green_volume', 'blue_volume'] %}
 		<div class="input">
 			<label for="{{option}}">{{job.help[option]}}</label>

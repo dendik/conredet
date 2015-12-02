@@ -26,9 +26,10 @@ wipe_multiplier = 1.2
 worker_sleep = 10 # seconds between job attempts
 
 default_basic_options = dict(
-	n_cells=150, cell_radius=30, cell_channel='red',
+	channels='rgb', n_cells=150, cell_radius=30, cell_channel='red',
 	red_volume=200, green_volume=200, blue_volume=200)
 basic_help = dict(
+	channels = "Assign RGB names to image channels. For image with four channels if we need channels 1,3,4, type: r-gb",
 	n_cells = "Expected number of cells",
 	cell_radius = "Expected cell radius in pixels",
 	cell_channel = "Cell channel",
@@ -204,6 +205,8 @@ class Job(object):
 				continue
 			if option == 'cell_channel':
 				assert_color(options[option])
+			elif option == 'channels':
+				assert set(options[option]) <= set('rgb-'), "Please only use r,g,b,-"
 			else:
 				options[option] = int(options[option])
 		self.options.update(options)
@@ -391,7 +394,8 @@ class Job(object):
 				self.help[option.dest] = None
 				continue
 			self.options[option.dest] = parser.defaults[option.dest]
-			self.help[option.dest] = option.help
+			if not self.help.get(option.dest):
+				self.help[option.dest] = option.help
 
 class Batch(Job):
 
