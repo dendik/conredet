@@ -167,7 +167,7 @@ def load_czi_metadata(images, czi):
 	for name, value in zip(options.channels, wavelengths):
 		channels[name] = float(value)
 	images.wavelengths = (channels['r'], channels['g'], channels['b'])
-	images.scales = tuple(
+	images.scale = tuple(
 		10**9 * float(czi.metadata.findall(".//Scaling" + coord)[0].text)
 		for coord in "ZYX"
 	)
@@ -200,7 +200,7 @@ def open_nd2(file):
 
 def load_nd2_metadata(nd2, images):
 	images.wavelengths = nd2_wavelengths(nd2)
-	images.scales = (
+	images.scale = (
 		nd2.scalez * 1000,
 		nd2.scalexy * 1000,
 		nd2.scalexy * 1000
@@ -225,7 +225,7 @@ def load_lsm_images(filename):
 	channels = dict(zip(options.channels, data))
 	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
 	images.wavelengths = lsm_wavelengths(meta)
-	images.scales = lsm_scales(meta)
+	images.scale = lsm_scale(meta)
 	return images
 
 def lsm_wavelengths(meta_page):
@@ -239,7 +239,7 @@ def lsm_wavelengths(meta_page):
 	wavelengths = dict(zip(options.channels, wavelengths))
 	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
-def lsm_scales(meta_page):
+def lsm_scale(meta_page):
 	return (
 		meta_page['plane_spacing'] * 1000,
 		meta_page['sample_spacing'] * 1000, # or plane_height / images_height
@@ -415,7 +415,7 @@ def with_output(function):
 def print_scale(images):
 	meta = {}
 	meta.update(dict(zip("rgb", images.wavelengths)))
-	meta.update(dict(zip("zyx", images.scales)))
+	meta.update(dict(zip("zyx", images.scale)))
 	print "x", "y", "z", "r", "g", "b", "unit"
 	print " ".join('{:.2f}'.format(meta[name]) for name in"xyzrgb"), "nm"
 
@@ -458,7 +458,7 @@ def onion_distance(spot1, color1, spots2):
 	if onion_distance is None:
 		return -1
 	# scale properly, assuming resolution by X is the same as by Y
-	onion_distance *= spot1.spots.images.scales[-1]
+	onion_distance *= spot1.spots.images.scale[-1]
 	return onion_distance
 
 def overlap(spot1, spot2):
