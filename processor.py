@@ -162,6 +162,7 @@ def load_czi_images(filename):
 
 def load_czi_metadata(images, czi):
 	wavelengths = czi.metadata.findall(".//ExcitationWavelength")
+	log('wavelengths', *wavelengths)
 	channels = {}
 	for name, value in zip(options.channels, wavelengths):
 		channels[name] = float(value)
@@ -211,6 +212,7 @@ def nd2_wavelengths(nd2):
 	wavelengths = {}
 	for name, plane in zip(options.channels, sorted(planes)):
 		wavelengths[name] = float(dict_path(planes[plane], tail))
+		log('wavelength', name, wavelengths[name])
 	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
 @logging
@@ -227,12 +229,13 @@ def load_lsm_images(filename):
 	return images
 
 def lsm_wavelengths(meta_page):
-	wavelengths = (
+	wavelengths = [
 		channel['wavelength']
 		for track in meta_page['tracks']
 		for channel in track['illumination_channels']
 		if channel.get('acquire', channel.get('aquire'))
-	)
+	]
+	log('wavelengths', *wavelengths)
 	wavelengths = dict(zip(options.channels, wavelengths))
 	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
