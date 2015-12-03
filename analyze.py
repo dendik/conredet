@@ -113,7 +113,7 @@ class Spot(object):
 
 	def to_physical_volume(self, volume):
 		"""Convert volume in voxels to physical volume in nm^3."""
-		sz, sy, sx = self.spots.images.scales
+		sz, sy, sx = self.spots.images.scale
 		voxel = sx * sy * sz
 		return volume * voxel
 
@@ -125,8 +125,8 @@ class Spot(object):
 
 	def physical_distance(self, other):
 		"""Return distance between centers of two signals in nm."""
-		c1 = np.array(self.center_of_mass()) * self.spots.images.scales
-		c2 = np.array(other.center_of_mass()) * other.spots.images.scales
+		c1 = np.array(self.center_of_mass()) * self.spots.images.scale
+		c2 = np.array(other.center_of_mass()) * other.spots.images.scale
 		return np.linalg.norm(c1 - c2)
 
 	def distance_to_variety(self, spots, max_distance=20, d=1):
