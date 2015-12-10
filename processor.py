@@ -136,6 +136,8 @@ def load_images():
 		images = load_nd2_images(options.nd2_images)
 	elif options.lsm_images:
 		images = load_lsm_images(options.lsm_images)
+	elif options.tiff_images:
+		images = load_tiff_images(options.tiff_images)
 	return images
 
 @logging
@@ -220,10 +222,7 @@ def load_lsm_images(filename):
 	lsm = tifffile.TIFFfile(filename)
 	meta_page, = (page for page in lsm.pages if page.is_lsm)
 	meta = meta_page.cz_lsm_scan_info
-	data = [page.asarray() for page in lsm.series[0].pages]
-	data = np.array(data).swapaxes(0, 1)
-	channels = dict(zip(options.channels, data))
-	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
+	images = load_tiff_images(None, tiff=lsm)
 	images.wavelengths = lsm_wavelengths(meta)
 	images.scale = lsm_scale(meta)
 	return images
@@ -245,6 +244,19 @@ def lsm_scale(meta_page):
 		meta_page['sample_spacing'] * 1000, # or plane_height / images_height
 		meta_page['line_spacing'] * 1000, # or plane_width / images_width
 	)
+
+@logging
+def load_tiff_images(filename, tiff=None):
+	tiff = tiff or tifffile.TIFFfile(filename)
+	data = [page.asarray() for page in tiff.series[0].pages]
+	data = np.array(data).swapaxes(0, 1)
+	if data.dtype != 'uint8':
+		data = (data.astype('float') / data.max() * 255).astype('uint8')
+	channels = dict(zip(options.channels, data))
+	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
+	images.wavelengths = (0, 0, 0)
+	images.scale = (0, 0, 0)
+	return images
 
 # --------------------------------------------------
 # Preprocessing
@@ -621,6 +633,7 @@ def option_parser():
 	p.add_option("-i", "--images", help="glob expression for images")
 	p.add_option("-z", "--czi-images", help="czi file with images")
 	p.add_option("-n", "--nd2-images", help="nd2 file with images")
+	p.add_option("-t", "--tiff-images", help="tiff file with images")
 	p.add_option("-l", "--lsm-images", help="lsm file with images")
 	p.add_option("-c", "--channels", default="rgb",
 		help="specify order in which image channels are used, - for not used")
