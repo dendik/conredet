@@ -248,15 +248,21 @@ def lsm_scale(meta_page):
 @logging
 def load_tiff_images(filename, tiff=None):
 	tiff = tiff or tifffile.TIFFfile(filename)
-	data = [page.asarray() for page in tiff.series[0].pages]
-	data = np.array(data).swapaxes(0, 1)
-	if data.dtype != 'uint8':
+	data = tiff_to_czxy(tiff)
+	if data.dtype != 'uint8': # force conversion to uint8 with stretching
 		data = (data.astype('float') / data.max() * 255).astype('uint8')
 	channels = dict(zip(options.channels, data))
 	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
 	images.wavelengths = (0, 0, 0)
 	images.scale = (0, 0, 0)
 	return images
+
+def tiff_to_czxy(tiff):
+	data = tiff.asarray()
+	if len(data.shape) ==  5 and data.shape[0] == 1: # XXX HACK for LSM
+		data = data[0]
+	assert len(data.shape) == 4 # should be ZCXY
+	return data.swapaxes(0, 1)
 
 # --------------------------------------------------
 # Preprocessing
