@@ -253,9 +253,21 @@ def load_tiff_images(filename, tiff=None):
 		data = (data.astype('float') / data.max() * 255).astype('uint8')
 	channels = dict(zip(options.channels, data))
 	images = Images().from_cubes([channels['r'], channels['g'], channels['b']])
+	load_tiff_meta(filename, images)
+	return images
+
+def load_tiff_meta(filename, images):
 	images.wavelengths = (0, 0, 0)
 	images.scale = (0, 0, 0)
-	return images
+
+	meta_filename = os.path.join(os.path.dirname(filename), 'scales.csv')
+	if os.path.exists(meta_filename):
+		with open(meta_filename) as fd:
+			header = fd.readline()
+			x, y, z, r, g, b, unit = fd.readline().strip().split()
+			assert unit == 'nm'
+			images.wavelengths = r, g, b
+			images.scale = z, y, x
 
 def tiff_to_czxy(tiff):
 	data = tiff.asarray()
