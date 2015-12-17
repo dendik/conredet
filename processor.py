@@ -79,7 +79,7 @@ def smart(spotss, images, options):
 	images = detect_cells(spotss, images, options)
 	prefill_spotss(spotss, images)
 	for n, cell in enumerate(spotss[cell_color].spots):
-		log(n, "...")
+		log("cell", n, "...")
 		for color, color_options in options.color.items():
 			if color == cell_color:
 					continue
@@ -138,6 +138,7 @@ def load_images():
 		images = load_lsm_images(options.lsm_images)
 	elif options.tiff_images:
 		images = load_tiff_images(options.tiff_images)
+	log("Loaded with scales", images.scale, "wavelengths", images.wavelengths)
 	return images
 
 @logging
@@ -260,14 +261,14 @@ def load_tiff_meta(filename, images):
 	images.wavelengths = (0, 0, 0)
 	images.scale = (0, 0, 0)
 
-	meta_filename = os.path.join(os.path.dirname(filename), 'scales.csv')
+	meta_filename = os.path.join(os.path.dirname(filename), options.out_scale)
 	if os.path.exists(meta_filename):
 		with open(meta_filename) as fd:
 			header = fd.readline()
 			x, y, z, r, g, b, unit = fd.readline().strip().split()
 			assert unit == 'nm'
-			images.wavelengths = r, g, b
-			images.scale = z, y, x
+			images.wavelengths = tuple(map(float, (r, g, b)))
+			images.scale = tuple(map(float, (z, y, x)))
 
 def tiff_to_czxy(tiff):
 	data = tiff.asarray()
@@ -471,6 +472,7 @@ def print_pairs(spotss):
 	print "distance", "physical_distance", "onion_distance",
 	print "overlap", "overlap_volume"
 	for cell_n, cell in iter_cells(spotss):
+		log("cell", cell_n, "...")
 		for color1, spot_n1, spot1 in iter_cell_spots(spotss, cell):
 			for color2, spot_n2, spot2 in iter_cell_spots(spotss, cell):
 				if spot1 == spot2:
