@@ -87,9 +87,11 @@ def print_good_pairs(series):
 			print spot.color, spot.number, spot.sizes[0],
 			print other.color, other.number, other.sizes[0],
 			if other.color == territory_color:
-				print spot.e_distances[territory_color], spot.occupancies[0, territory_color]
+				print spot.e_distances[other], spot.occupancies[0, territory_color]
+			elif spot.color == territory_color:
+				print other.e_distances[spot], spot.occupancies[0, territory_color]
 			else:
-				print spot.distance(other), spot.occupancies[0, other.color]
+				print spot.r_distances[other], spot.occupancies[0, other.color]
 
 def print_cell_distances(series):
 	print_header('label cell_number spot_number spot_color spot_size distance')
