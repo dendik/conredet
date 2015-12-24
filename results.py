@@ -117,14 +117,15 @@ class Series(object):
 				for spot in cell.overlaps:
 					spot.good = True
 
-	def mark_pairs(self, pair={'green':'blue', 'blue':'green'}):
-		Spot.pair = None
+	def mark_good_pairs(self, pair={'green':'blue', 'blue':'green'}):
+		Spot.pair = Spot._pair = None
 		for cell in self.sorted_cells():
 			paired = [spot for spot in cell.overlaps if spot.color in pair]
 			for spot in paired:
-				candidates = self.cell.overlaps_by(pair[spot.color])
-				spot._pair min(candidates, key=spot.distance)
-			if all(spot._pair._pair == spot for spot in paired):
+				candidates = spot.cell.overlaps_by(pair[spot.color])
+				if candidates:
+					spot._pair = min(candidates, key=spot.distance)
+			if all(spot._pair._pair == spot for spot in paired if spot._pair):
 				for spot in paired:
 					spot.pair = spot._pair
 
