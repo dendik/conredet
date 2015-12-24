@@ -77,6 +77,20 @@ def print_pt_distances(series):
 		print spot.distance(other), spot.occupancies[0, other.color],
 		print spot.e_distances[territory_color], spot.occupancies[0, territory_color]
 
+def print_good_pairs(series):
+	print_header('label cell_number spot1_color spot1_number spot1_volume'
+		' spot2_color spot2_number spot2_volume spot_distance spot_overlap')
+	for spot in iter_good_spots(series):
+		territory_color = spot.territory_color()
+		for other in spot.cell.overlaps:
+			print series.label, spot.cell.number,
+			print spot.color, spot.number, spot.sizes[0],
+			print other.color, other.number, other.sizes[0],
+			if other.color == territory_color:
+				print spot.e_distances[territory_color], spot.occupancies[0, territory_color]
+			else:
+				print spot.distance(other), spot.occupancies[0, other.color]
+
 def print_cell_distances(series):
 	print_header('label cell_number spot_number spot_color spot_size distance')
 	for cell in series.sorted_cells():
@@ -95,12 +109,15 @@ def print_series(prefix, label=None):
 		if getattr(options, option_name, False):
 			function(series)
 
-def iter_good_pairs(series):
+def iter_good_spots(series):
 	series.mark_good()
-	series.mark_good_pairs()
 	for spot in series.sorted_spots():
-		if not spot.good:
-			continue
+		if spot.good:
+			yield spot
+
+def iter_good_pairs(series):
+	series.mark_good_pairs()
+	for spot in iter_good_spots():
 		if spot.pair:
 			yield spot, spot.pair
 
@@ -113,6 +130,7 @@ if __name__ == "__main__":
 	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("--distances", action="store_true")
 	p.add_option("--pt-distances", action="store_true")
+	p.add_option("--good-pairs", action="store_true")
 	p.add_option("--cell-distances", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
