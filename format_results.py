@@ -56,13 +56,13 @@ def print_with_prefix(series):
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 def print_distances(series):
-	print_header('label spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size o_distance r_distance territory_occupancy')
+	print_header('label spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size e_distance r_distance territory_occupancy')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
 		territory_size = spot.cell.sum_size(territory_color)
 		print series.label, spot.number, spot.color, spot.sizes[0],
 		print other.color, other.sizes[0], spot.occupancies[0, other.color],
-		print territory_color, territory_size, spot.o_distances[territory_color],
+		print territory_color, territory_size, spot.e_distances[territory_color],
 		print spot.r_distances[territory_color], spot.occupancies[0, territory_color]
 
 def print_pt_distances(series):
@@ -75,7 +75,7 @@ def print_pt_distances(series):
 		print spot.color, spot.number, spot.sizes[0],
 		print other.color, other.number, other.sizes[0],
 		print spot.distance(other), spot.occupancies[0, other.color],
-		print spot.o_distances[territory_color], spot.occupancies[0, territory_color]
+		print spot.e_distances[territory_color], spot.occupancies[0, territory_color]
 
 def print_cell_distances(series):
 	print_header('label cell_number spot_number spot_color spot_size distance')
@@ -100,11 +100,8 @@ def iter_good_pairs(series):
 	for spot in series.sorted_spots():
 		if not spot.good:
 			continue
-		try:
-			other = spot.other_signal()
-		except Exception:
-			continue
-		yield spot, other
+		if spot.pair:
+			yield spot, spot.pair
 
 if __name__ == "__main__":
 	p = optparse.OptionParser()

@@ -83,10 +83,32 @@
 			<dd>Two-dimensional distance between borders of two signals. Unit: nm. To
 			obtain this value we either extend or shrink a signal by one pixel in all
 			directions until it overlaps both presense and absense of pixels of color
-			of the othe signal. The value is number of layers added/removed. Hence
-			the title: onion distance. Note: this is distance to the nearest signal
-			of given color, not exactly to the signal2 in the table. The distance is
+			of the othe signal. The value is calculated from the number of layers
+			added/removed. Hence the title: onion distance. The distance is
 			very discreet and noisy. This value is comparable between images.
+			<p>WARNING! For line with green1 red2 an onion distance of 2 means the
+			closest green signal from red2 is 2nm away. green1 may actually be a lot
+			further.</p>
+			<p>There are two special values here.</p>
+			<p>-1 means the distance is too large to be worth computing (the
+			threshold is 20 pixels&nbsp;&mdash; computation get really slow with
+			larger values and in practice this usually means that there is no
+			detected usable pair).</p>
+			<p>-2 means that distance between the two given colors is not computed
+			(currently only distances to red color are computed.</p>
+			</dd>
+
+			<dt>ellipsoid_distance</dt>
+			<dd>Two-dimensional distance between borders of two signals. Unit: nm. To
+			obtain this value we find the smallest ellipsoid with the center of the
+			first signal that overlaps the second signal. (More precisely: until it
+			overlaps both presense and absense of pixels of color of the other signal).
+			The ellipsoid has equal axes when measured in phisical units, so actually
+			it is a sphere. The value is the radius of the sphere. The distance is
+			very discreet and noisy. This value is comparable between images.
+			<p>WARNING! For line with green1 red2 an onion distance of 2 means the
+			closest green signal from red2 is 2nm away. green1 may actually be a lot
+			further.</p>
 			<p>There are two special values here.</p>
 			<p>-1 means the distance is too large to be worth computing (the
 			threshold is 20 pixels&nbsp;&mdash; computation get really slow with
