@@ -97,6 +97,7 @@ def print_series(prefix, label=None):
 
 def iter_good_pairs(series):
 	series.mark_good()
+	series.mark_good_pairs()
 	for spot in series.sorted_spots():
 		if not spot.good:
 			continue
