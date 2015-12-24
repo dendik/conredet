@@ -17,6 +17,7 @@ option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 draw_colors = ('red2', 'green', 'blue')
 onion_colors = ('red',)
 cell_color = 'red2'
+max_ellipsoid_distance = 20
 
 def main():
 	global options
@@ -165,10 +166,9 @@ def load_czi_images(filename):
 
 def load_czi_metadata(images, czi):
 	wavelengths = czi.metadata.findall(".//ExcitationWavelength")
-	log('wavelengths', *wavelengths)
 	channels = {}
 	for name, value in zip(options.channels, wavelengths):
-		channels[name] = float(value)
+		channels[name] = float(value.text)
 	images.wavelengths = (channels['r'], channels['g'], channels['b'])
 	images.scale = tuple(
 		10**9 * float(czi.metadata.findall(".//Scaling" + coord)[0].text)
@@ -469,7 +469,7 @@ def print_signal_stats(cell_n, color, spot_n, spot):
 @logging
 def print_pairs(spotss):
 	print "cell_n", "color1", "spot1", "color2", "spot2",
-	print "distance", "physical_distance", "onion_distance",
+	print "distance", "physical_distance", "ellipsoid_distance",
 	print "overlap", "overlap_volume"
 	for cell_n, cell in iter_cells(spotss):
 		log("cell", cell_n, "...")
@@ -480,8 +480,20 @@ def print_pairs(spotss):
 				print cell_n, color1, spot_n1, color2, spot_n2,
 				print " ".join("{:.2f}".format(value) for value in [
 					spot1.distance(spot2), spot1.physical_distance(spot2),
-					onion_distance(spot1, color1, spotss[color2]),
+					ellipsoid_distance(spot1, color2, spotss[color2]),
 				] + list(overlap(spot1, spot2)))
+
+def ellipsoid_distance(spot1, color2, spots2):
+	if color2 not in onion_colors:
+		return -2
+	z, y, x = spot1.spots.images.scale
+	distance = spot1.center_to_variety(spots2,
+		d=(float(z)/x, float(y)/x, 1), max_distance=max_ellipsoid_distance)
+	if distance is None:
+		return -1
+	# scale properly, assuming distance in XY plane with X == Y
+	distance *= x # XXX which means "scale somehow" :-/
+	return distance
 
 def onion_distance(spot1, color1, spots2):
 	if color1 not in onion_colors:

@@ -54,13 +54,13 @@ class Series(object):
 			spot1 = self.spot(v.color1, v.spot1)
 			spot2 = self.spot(v.color2, v.spot2)
 			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
-			spot2.o_distances[spot1.color] = float(v.onion_distance)
+			spot2.e_distances[spot1.color] = float(v.ellipsoid_distance)
 			spot2.r_distances[spot1.color] = float(v.physical_distance)
-			if spot2.o_distances[spot1.color] < 0:
-				spot2.o_distances[spot1.color] = float('inf')
+			if spot2.e_distances[spot1.color] < 0:
+				spot2.e_distances[spot1.color] = float('inf')
 			if float(v.overlap_volume) > 0:
 				overlap(spot1, spot2)
-				spot2.o_distances[spot1.color] *= -1
+				spot2.e_distances[spot1.color] *= -1
 
 	@staticmethod
 	def parse_blocks(fd, n_headers=2):
@@ -100,10 +100,10 @@ class Series(object):
 
 	def parse_distances(self, fd):
 		line = self.parse_blocks(fd)
-		for color1, color2, number, o_distance, r_distance in line:
+		for color1, color2, number, o_distance, e_distance in line:
 			spot1 = self.spot(color1, number)
 			spot1.o_distances[color2] = float(o_distance)
-			spot1.r_distances[color2] = float(r_distance)
+			spot1.e_distances[color2] = float(e_distance)
 
 	def mark_good(self):
 		Spot.good = False
@@ -112,10 +112,21 @@ class Series(object):
 			blue = len(cell.overlaps_by('blue'))
 			red = len(cell.overlaps_by('red'))
 
-			if green == blue == 2:
+			if green == blue == 2 and red > 0:
 				cell.good = True
-				for cell in cell.overlaps:
-					cell.good = True
+				for spot in cell.overlaps:
+					spot.good = True
+
+	def mark_pairs(self, pair={'green':'blue', 'blue':'green'}):
+		Spot.pair = None
+		for cell in self.sorted_cells():
+			paired = [spot for spot in cell.overlaps if spot.color in pair]
+			for spot in paired:
+				candidates = self.cell.overlaps_by(pair[spot.color])
+				spot._pair min(candidates, key=spot.distance)
+			if all(spot._pair._pair == spot for spot in paired):
+				for spot in paired:
+					spot.pair = spot._pair
 
 class Spot(object):
 	overlaps = None
@@ -134,8 +145,9 @@ class Spot(object):
 		self.sizes = {}
 		self.occupancies = defaultdict(float)
 		self.overlaps = set()
-		self.o_distances = defaultdict(lambda: float('inf'))
-		self.r_distances = defaultdict(lambda: float('inf'))
+		self.e_distances = defaultdict(lambda: float('inf')) # ellipsoid border-border
+		self.o_distances = defaultdict(lambda: float('inf')) # onion border-border
+		self.r_distances = defaultdict(lambda: float('inf')) # physical center-center
 
 	def set_coords(self, coords):
 		self.coords = tuple(float(v) for v in coords)
@@ -171,16 +183,11 @@ class Spot(object):
 			if spot.is_cell():
 				return spot
 
-	def other_signal(self, pair={'green':'blue', 'blue':'green'}):
-		others = self.cell.overlaps_by(pair[self.color])
-		return min(others, key=self.distance)
-
 	def is_not_broken(self):
-		try:
-			spot = self.other_signal()
-		except Exception:
-			return False
-		return self.occupancies[0, spot.color] >= (min(self.size, spot.size) / 2)
+		if self.pair:
+			overlap = self.occupancies[0, self.pair.color]
+			half_size = min(self.size, self.pair.size) / 2
+			return overlap >= half_size
 
 	def territory_color(self):
 		return territory_color
