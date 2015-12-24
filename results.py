@@ -51,16 +51,14 @@ class Series(object):
 	def parse_pairs(self, fd):
 		for line in csv.DictReader(fd, delimiter=' '):
 			v = Struct(**line)
+			overlaps = float(v.overlap_volume) > 0
 			spot1 = self.spot(v.color1, v.spot1)
 			spot2 = self.spot(v.color2, v.spot2)
 			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
-			spot2.e_distances[spot1.color] = float(v.ellipsoid_distance)
-			spot2.r_distances[spot1.color] = float(v.physical_distance)
-			if spot2.e_distances[spot1.color] < 0:
-				spot2.e_distances[spot1.color] = float('inf')
-			if float(v.overlap_volume) > 0:
+			spot1.e_distances[spot2] = boundary_distance(v.ellipsoid_distance, overlaps)
+			spot1.r_distances[spot2] = boundary_distance(v.physical_distance)
+			if overlaps:
 				overlap(spot1, spot2)
-				spot2.e_distances[spot1.color] *= -1
 
 	@staticmethod
 	def parse_blocks(fd, n_headers=2):
@@ -239,3 +237,11 @@ class Spot(object):
 def overlap(spot1, spot2):
 	spot1.overlaps.add(spot2)
 	spot2.overlaps.add(spot1)
+
+def boundary_distance(value, overlap=0):
+	distance = float(value)
+	if distance < 0:
+		distance = float("inf")
+	if overlap > 0:
+		distance *= -1
+	return distance
