@@ -223,7 +223,7 @@ def load_lsm_images(filename):
 	lsm = tifffile.TIFFfile(filename)
 	meta_page, = (page for page in lsm.pages if page.is_lsm)
 	meta = meta_page.cz_lsm_scan_info
-	images = load_tiff_images(None, tiff=lsm)
+	images = load_tiff_images(filename, tiff=lsm)
 	images.wavelengths = lsm_wavelengths(meta)
 	images.scale = lsm_scale(meta)
 	return images
