@@ -16,7 +16,6 @@ colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 draw_colors = ('red2', 'green', 'blue')
 onion_colors = ('red',)
-cell_color = 'red2'
 max_ellipsoid_distance = 20
 
 def main():
@@ -79,10 +78,10 @@ def print_results(spotss, images):
 def smart(spotss, images, options):
 	images = detect_cells(spotss, images, options)
 	prefill_spotss(spotss, images)
-	for n, cell in enumerate(spotss[cell_color].spots):
+	for n, cell in enumerate(spotss[options.cell_color].spots):
 		log("cell", n, "...")
 		for color, color_options in options.color.items():
-			if color == cell_color:
+			if color == options.cell_color:
 					continue
 			cube = select_cube(images, color_options, cell)
 			spots = smart_color(cube, color_options)
@@ -92,9 +91,9 @@ def smart(spotss, images, options):
 
 def detect_cells(spotss, images, options):
 	log("Detecting cells...")
-	color_options = options.color[cell_color]
+	color_options = options.color[options.cell_color]
 	cube = detection_filters(images, color_options)
-	this = spotss[cell_color] = detect_signals(cube, color_options)
+	this = spotss[options.cell_color] = detect_signals(cube, color_options)
 	if options.neighborhood_size:
 		neighborhoods = build_neighborhoods(this, images)
 		images.cubes[options.normalize_channel] = normalize_neighborhoods(neighborhoods, images)
@@ -455,7 +454,7 @@ def print_scale(images):
 def print_signals(spotss):
 	print "cell_n", "color", "spot", "x", "y", "z", "size", "volume"
 	for cell_n, cell in iter_cells(spotss):
-		print_signal_stats(cell_n, 'red2', cell_n, cell)
+		print_signal_stats(cell_n, options.cell_color, cell_n, cell)
 		for color, spot_n, spot in iter_cell_spots(spotss, cell):
 			print_signal_stats(cell_n, color, spot_n, spot)
 
@@ -513,12 +512,12 @@ def overlap(spot1, spot2):
 	return overlap, physical_overlap
 
 def iter_cells(spotss):
-	for cell_n, cell in enumerate(spotss[cell_color].spots):
+	for cell_n, cell in enumerate(spotss[options.cell_color].spots):
 			yield cell_n, cell
 
 def iter_cell_spots(spotss, cell):
 	for color in spotss:
-		if color == cell_color:
+		if color == options.cell_color:
 			continue
 		spots = spotss[color]
 		for spot_n in cell.intersection_ids(spots):
@@ -691,6 +690,7 @@ def option_parser():
 			help="Apply filters. Either gauss(sigma) or peak(sigma, [side])")
 		p.add_option(color + "-despeckle", type=int,
 			help="Apply median filter before any processing")
+	p.add_option("--cell-color", default="red2", help="Color for cell detection")
 	p.add_option("--normalize-channel", default=0, type=int)
 	p.add_option("--neighborhood-size", default=25, type=int,
 		help="Size (approx. half the side of square) of spot neighborhood")
