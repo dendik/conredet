@@ -119,7 +119,7 @@ def iter_good_spots(series):
 
 def iter_good_pairs(series):
 	series.mark_good_pairs()
-	for spot in iter_good_spots():
+	for spot in iter_good_spots(series):
 		if spot.pair:
 			yield spot, spot.pair
 
