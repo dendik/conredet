@@ -85,6 +85,8 @@ def smart(spotss, images, options):
 					continue
 			cube = select_cube(images, color_options, cell)
 			spots = smart_color(cube, color_options)
+			spots.cube = cell.spots.cube # do not waste space for each signal,
+			# but keep _something_ in place for geometry (used in drawing)
 			spotss[color_options.color].spots += spots.spots
 	smart_draw(spotss, images, options)
 	return images
