@@ -55,7 +55,7 @@ class Series(object):
 			spot1 = self.spot(v.color1, v.spot1)
 			spot2 = self.spot(v.color2, v.spot2)
 			spot1.occupancies[0, spot2.color] = float(v.overlap_volume)
-			spot1.e_distances[spot2] = boundary_distance(v.ellipsoid_distance, overlaps)
+			spot1.e_distances[spot2.color] = boundary_distance(v.ellipsoid_distance, overlaps)
 			spot1.r_distances[spot2] = boundary_distance(v.physical_distance)
 			if overlaps:
 				overlap(spot1, spot2)
