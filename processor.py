@@ -230,15 +230,27 @@ def load_lsm_images(filename):
 	return images
 
 def lsm_wavelengths(meta_page):
+	log('channels', *(channel['name']
+		for track in meta_page['tracks'] for channel in track['data_channels']))
 	wavelengths = [
 		channel['wavelength']
 		for track in meta_page['tracks']
-		for channel in track['illumination_channels']
-		if channel.get('acquire', channel.get('aquire'))
+		for channel in lsm_illumination_channels(track)
 	]
 	log('wavelengths', *wavelengths)
 	wavelengths = dict(zip(options.channels, wavelengths))
 	return wavelengths['r'], wavelengths['g'], wavelengths['b']
+
+def lsm_illumination_channels(track):
+	# 1. filter illumination channels to only have "aquired" ones
+	# 2. fill the result up with None's to have the same length as
+	# the data_channels in the track
+	illumination = [channel
+		for channel in track['illumination_channels']
+		if channel.get('acquire', channel.get('aquire'))]
+	filler = dict(acquire=1, wavelength=None) # fake illumination_channel
+	size = len(track['data_channels'])
+	return (illumination + [filler] * size)[:size]
 
 def lsm_scale(meta_page):
 	return (
