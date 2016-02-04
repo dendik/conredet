@@ -3,7 +3,8 @@ from PIL import Image, ImageDraw
 import results
 import optparse
 import math
-from os.path import join
+from glob import glob
+from os.path import join, basename
 
 p = optparse.OptionParser()
 p.add_option("-r", "--radius", default=30, type=int)
@@ -11,6 +12,7 @@ p.add_option("-c", "--color", default="yellow")
 p.add_option("-i", "--image", default="img-bblue.png")
 p.add_option("-o", "--image-out", default="view-img-bblue.png")
 p.add_option("-d", "--distance", type=float, help="min distance between paired signals")
+p.add_option("-a", "--auto", action="store_true", help="Make up image/image-out for all colors")
 options, args = p.parse_args()
 
 results.verbose = False
@@ -46,7 +48,6 @@ def is_highlightable(spot):
 	return True
 
 def highlight_series(prefix, image, image_out):
-	print "Processing", prefix
 	series = results.Series(prefix)
 	series.mark_good()
 	img = Image.open(join(prefix, image)).convert('RGB')
@@ -58,5 +59,15 @@ def highlight_series(prefix, image, image_out):
 				draw.ellipse((x - r, y - r, x + r, y + r), outline=options.color)
 	img.save(join(prefix, image_out))
 
+def auto_highlight(prefix):
+	for image in glob(join(prefix, 'img-b*')):
+		image = basename(image)
+		print image
+		highlight_series(prefix, image, 'highlight-' + image)
+
 for prefix in args:
-	highlight_series(prefix, options.image, options.image_out)
+	print "Processing", prefix
+	if options.auto:
+		auto_highlight(prefix)
+	else:
+		highlight_series(prefix, options.image, options.image_out)
