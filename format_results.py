@@ -101,6 +101,25 @@ def print_cell_distances(series):
 			print series.label, cell.number, spot.number, spot.color, spot.sizes[0],
 			print d.dot(d) ** 0.5
 
+def print_cell_summary(series):
+	print_header('label cell_number min_D(green,blue)'
+		' D(best_green,territory) D(best_blue,territory)'
+		' min_D(green,territory) min_D(blue,territory)')
+	for cell in iter_good_cells(series):
+		territory_color = cell.territory_color()
+		reds, greens, blues = (
+			[spot for spot in cell.overlaps if spot.color == color]
+			for color in ('red', 'green', 'blue')
+		)
+		best_g, best_b = min(zip(greens, blues), key=lambda (a,b): a.distance(b))
+		best_rg = min(spot.e_distances[territory_color] for spot in greens)
+		best_rb = min(spot.e_distances[territory_color] for spot in blues)
+		print series.label, cell.number,
+		print best_g.distance(best_b),
+		print best_g.e_distances[territory_color], best_b.e_distances[territory_color],
+		print best_rg, best_rb,
+		print
+
 def print_series(prefix, label=None):
 	series = results.Series(prefix, label)
 
@@ -116,6 +135,12 @@ def iter_good_spots(series):
 	for spot in series.sorted_spots():
 		if spot.good:
 			yield spot
+
+def iter_good_cells(series):
+	series.mark_good()
+	for cell in series.sorted_cells():
+		if cell.good:
+			yield cell
 
 def iter_good_pairs(series):
 	series.mark_good_pairs()
@@ -134,6 +159,7 @@ if __name__ == "__main__":
 	p.add_option("--pt-distances", action="store_true")
 	p.add_option("--good-pairs", action="store_true")
 	p.add_option("--cell-distances", action="store_true")
+	p.add_option("--cell-summary", action="store_true")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 	for prefix in args:
