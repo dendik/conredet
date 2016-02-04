@@ -230,15 +230,16 @@ def load_lsm_images(filename):
 	return images
 
 def lsm_wavelengths(meta_page):
-	log('channels', *(channel['name']
-		for track in meta_page['tracks'] for channel in track['data_channels']))
-	wavelengths = [
-		channel['wavelength']
+	channels = [channel['name']
 		for track in meta_page['tracks']
-		for channel in lsm_illumination_channels(track)
-	]
+		for channel in track['data_channels']]
+	wavelengths = [channel['wavelength']
+		for track in meta_page['tracks']
+		for channel in lsm_illumination_channels(track)]
+	log('channels', *channels)
 	log('wavelengths', *wavelengths)
 	wavelengths = dict(zip(options.channels, wavelengths))
+	log('channel names', dict(zip(options.channels, channels)))
 	return wavelengths['r'], wavelengths['g'], wavelengths['b']
 
 def lsm_illumination_channels(track):
