@@ -23,7 +23,7 @@ def all_pairs(spot):
 	]
 
 def distance(spot1, spot2):
-	x1, y1, z2 = spot1.coords
+	x1, y1, z1 = spot1.coords
 	x2, y2, z2 = spot2.coords
 	return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
@@ -38,19 +38,25 @@ def max_distance(spot):
 	distances = [distance(a, b) for a, b in best_pairs(spot)]
 	return max(distances)
 
-for prefix in args:
+def is_highlightable(spot):
+	if not spot.good or not spot.is_cell():
+		return False
+	if options.distance and max_distance(spot) < options.distance:
+		return False
+	return True
+
+def highlight_series(prefix, image, image_out):
 	print "Processing", prefix
 	series = results.Series(prefix)
 	series.mark_good()
-
-	img = Image.open(join(prefix, options.image)).convert('RGB')
+	img = Image.open(join(prefix, image)).convert('RGB')
 	draw = ImageDraw.Draw(img)
 	for spot in sorted(series.spots.values()):
-		if not spot.good or not spot.is_cell():
-			continue
-		if options.distance and max_distance(spot) < options.distance:
-			continue
-		x, y, z = spot.coords
-		for r in range(options.radius, options.radius + 3):
-			draw.ellipse((x - r, y - r, x + r, y + r), outline=options.color)
-	img.save(join(prefix, options.image_out))
+		if is_highlightable(spot):
+			x, y, z = spot.coords
+			for r in range(options.radius, options.radius + 3):
+				draw.ellipse((x - r, y - r, x + r, y + r), outline=options.color)
+	img.save(join(prefix, image_out))
+
+for prefix in args:
+	highlight_series(prefix, options.image, options.image_out)
