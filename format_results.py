@@ -94,12 +94,16 @@ def print_good_pairs(series):
 				print spot.r_distances[other], spot.occupancies[0, other.color]
 
 def print_cell_distances(series):
-	print_header('label cell_number spot_number spot_color spot_size distance')
-	for cell in series.sorted_cells():
-		for spot in cell.overlaps:
-			d = (cell.center - spot.center)
-			print series.label, cell.number, spot.number, spot.color, spot.sizes[0],
-			print d.dot(d) ** 0.5
+	print_header('label cell_number b1g1 b1g2 b2g1 b2g2 b1t b2t g1t g2t')
+	for cell in iter_good_cells(series):
+		territory_color = cell.territory_color()
+		blues = list(cell.overlaps_by('blue'))
+		greens = list(cell.overlaps_by('green'))
+		blues_greens = [blue.distance(green) for blue in blues for green in greens]
+		territory = [spot.e_distances[territory_color] for spot in blues + greens]
+		distances = " ".join(map(str, blues_greens + territory))
+		distances = distances.replace('inf', '>' + str(series.scale[0] * 21))
+		print series.label, cell.number, distances
 
 def print_cell_summary(series):
 	print_header('label cell_number min_D(green,blue)'
