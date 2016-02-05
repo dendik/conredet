@@ -16,7 +16,6 @@ colors = [(200, 50, 50), (200, 100, 0), (200, 0, 100), (150, 200, 0)]
 option_colors = dict(red=0, green=1, blue=2, red2=0, green2=1, blue2=2)
 draw_colors = ('red2', 'green', 'blue')
 onion_colors = ('red',)
-max_ellipsoid_distance = 20
 
 def main():
 	global options
@@ -502,7 +501,8 @@ def ellipsoid_distance(spot1, color2, spots2):
 		return -2
 	z, y, x = spot1.spots.images.scale
 	distance = spot1.center_to_variety(spots2,
-		d=(float(z)/x, float(y)/x, 1), max_distance=max_ellipsoid_distance)
+		d=(float(z)/x, float(y)/x, 1),
+		max_distance=options.max_ellipsoid_distance)
 	if distance is None:
 		return -1
 	# scale properly, assuming distance in XY plane with X == Y
@@ -512,7 +512,8 @@ def ellipsoid_distance(spot1, color2, spots2):
 def onion_distance(spot1, color1, spots2):
 	if color1 not in onion_colors:
 		return -2
-	onion_distance = spot1.distance_to_variety(spots2, d=(0, 1, 1))
+	onion_distance = spot1.distance_to_variety(spots2,
+		d=(0, 1, 1), max_distance=options.max_onion_distance)
 	if onion_distance is None:
 		return -1
 	# scale properly, assuming resolution by X is the same as by Y
@@ -584,8 +585,10 @@ def print_distances(spotss):
 			other_spots = spotss[other]
 			for n, spot in enumerate(spotss[color].spots):
 				print n,
-				print spot.distance_to_variety(other_spots, d=(0, 1, 1)) or -1,
-				print spot.center_to_variety(other_spots, d=(0.3, 1, 1)) or -1,
+				print spot.distance_to_variety(other_spots,
+					d=(0, 1, 1), max_distance=options.max_onion_distance) or -1,
+				print spot.center_to_variety(other_spots,
+					d=(0.3, 1, 1), max_distance=options.max_ellipsoid_distance) or -1,
 				print
 
 # --------------------------------------------------
@@ -715,6 +718,10 @@ def option_parser():
 		help="Level of detected signal in neighborhood (used by next option)")
 	p.add_option("--neighborhood-shift-quantile", type=float,
 		help="Shift values to make this quantile equal neighborhood-set-level")
+	p.add_option("--max-onion-distance", type=int, default=20,
+		help="Maximal distance to check in onion distance calculations")
+	p.add_option("--max-ellipsoid-distance", type=int, default=20,
+		help="Maximal distance to check in ellipsoid distance calculations")
 	p.add_option("--spot-sizes", default=(0, 1, 3),
 		help="Comma-separated list of spot extension sizes to report occupancy on")
 	p.add_option("--border-color", default=(255, 160, 80),
