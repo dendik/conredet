@@ -33,6 +33,8 @@ import numpy as np
 from scipy.ndimage.measurements import center_of_mass
 from utils import Substitute, log, xyzrange, xyzvrange, find_components
 
+epsilon = 1e-10 # very small non-zero value to avoid division by zero
+
 class Spot(object):
 
 	def __init__(self, spots, coords):
@@ -57,7 +59,7 @@ class Spot(object):
 		"""Return center of mass of the spot as a Z,Y,X tuple."""
 		cube = cube or self.spots.cube
 		return tuple(
-			np.average(coord, weights=cube[self.coords])
+			np.average(coord, weights=cube[self.coords] + epsilon)
 			for coord in self.coords
 		)
 
