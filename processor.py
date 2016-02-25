@@ -186,7 +186,7 @@ def load_nd2_images(filename):
 		for n, channel in enumerate(options.channels):
 			channels[channel] = data[:, n, :, :]
 		images = Images()
-		images.from_cubes([channels['r'], channels['g'], channels['b']])
+		images.from_cubes([channels.get('r'), channels.get('g'), channels.get('b')])
 		load_nd2_metadata(nd2, images)
 	return images
 
@@ -216,7 +216,7 @@ def nd2_wavelengths(nd2):
 	for name, plane in zip(options.channels, sorted(planes)):
 		wavelengths[name] = float(dict_path(planes[plane], tail))
 		log('wavelength', name, wavelengths[name])
-	return wavelengths['r'], wavelengths['g'], wavelengths['b']
+	return wavelengths.get('r', 0), wavelengths.get('g', 0), wavelengths.get('b', 0)
 
 @logging
 def load_lsm_images(filename):
