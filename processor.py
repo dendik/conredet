@@ -396,6 +396,16 @@ class Filters(object):
 			dx, dy, dz = dx * 3, dx * 3, dx
 		self.cube = median_filter(self.cube, (dz, dy, dx))
 
+	def normalize_layers(self, quantile=0.7):
+		# scale & shift to make 0.7 quantile value at 0.7 brightness, max at 1
+		# this potentially resets some very dark pixels to 0 (any fuss?)
+		for z in range(self.cube.shape[0]):
+			low = np.percentile(self.cube[z], quantile)
+			high = self.cube[z].max()
+			scale = (1 - quantile) / (high - low)
+			shift = 1 - scale * high
+			self.cube[z] = self.cube[z] * scale + shift
+
 @logging
 def detection_filters(images, options):
 	cube = images.cubes[options.channel].astype('float')
