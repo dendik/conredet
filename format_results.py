@@ -56,7 +56,9 @@ def print_with_prefix(series):
 			print spot.color, spot.number, " ".join(map(str, spot.coords))
 
 def print_distances(series):
-	print_header('label spot_number spot_color spot_size other_color other_size spot_other_occupancy territory_color territory_size e_distance r_distance territory_occupancy')
+	print_header('label spot_number spot_color spot_size'
+		' other_color other_size spot_other_occupancy territory_color'
+		' territory_size e_distance r_distance territory_occupancy')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
 		territory_size = spot.cell.sum_size(territory_color)
