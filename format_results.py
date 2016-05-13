@@ -68,14 +68,15 @@ def print_distances(series):
 def print_pt_distances(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'
 		' spot2_color spot2_number spot2_volume spot_distance spot_overlap'
-		' territory_distance territory_overlap')
+		' territory_distance territory_overlap territory_volume')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
 		print series.label, spot.cell.number,
 		print spot.color, spot.number, spot.sizes[0],
 		print other.color, other.number, other.sizes[0],
 		print spot.distance(other), spot.occupancies[0, other.color],
-		print spot.e_distances[territory_color], spot.occupancies[0, territory_color]
+		print spot.e_distances[territory_color], spot.occupancies[0, territory_color],
+		print spot.territory_with(other).sizes[0]
 
 def print_good_pairs(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'

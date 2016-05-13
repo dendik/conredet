@@ -191,6 +191,19 @@ class Spot(object):
 	def territory_color(self):
 		return territory_color
 
+	def territory_with(self, other):
+		self_territories = self.overlaps_by(self.territory_color())
+		other_territories = other.overlaps_by(other.territory_color())
+		best = lambda territories: max(territories, key=lambda t: t.sizes[0])
+		if self_territories & other_territories:
+			return best(self_territories & other_territories)
+		elif self_territories and not other_territories:
+			return best(self_territories)
+		elif other_territories and not self_territories:
+			return best(other_territories)
+		else: # either no contact with territory OR signals contact different territories
+			return Spot(self.series, self.territory_color(), -1).set_size(0, -1)
+
 	def sum_size(self, color):
 		return sum(other.sizes[0] for other in self.overlaps_by(color))
 
