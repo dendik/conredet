@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import optparse
 from flask import Flask, render_template, request, send_file
 from flask import redirect, url_for
 from wui_helpers import ConfigObject
@@ -58,6 +59,12 @@ def view(id, filename=None):
 	return render_template("view.html", job=job, images=images)
 
 if __name__ == "__main__":
-	app.run(debug=True, host='0.0.0.0')
+	p = optparse.OptionParser()
+	p.add_option('-d', '--debug', action='store_true', default=False)
+	p.add_option('-p', '--port', type=int, default=5000)
+	p.add_option('-b', '--bind', help='IP address to bind', default='127.0.0.1')
+	options, args = p.parse_args()
+
+	app.run(host=options.bind, port=options.port, debug=options.debug)
 
 # vim: set noet:
