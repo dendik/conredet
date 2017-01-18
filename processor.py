@@ -6,7 +6,7 @@ import sys
 import numpy as np
 from scipy.ndimage import gaussian_filter, median_filter, maximum_filter
 from PIL import Image
-import tifffile
+from tifffile import tifffile
 
 from analyze import Images, Spots
 from utils import log, log_dict, logging, ifverbose, roundint, Re, dict_path
