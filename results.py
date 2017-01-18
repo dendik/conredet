@@ -103,14 +103,14 @@ class Series(object):
 			spot1.o_distances[color2] = float(o_distance)
 			spot1.e_distances[color2] = float(e_distance)
 
-	def mark_good(self):
+	def mark_good(self, greens=2, blues=2):
 		Spot.good = False
 		for cell in self.sorted_cells():
 			green = len(cell.overlaps_by('green'))
 			blue = len(cell.overlaps_by('blue'))
 			red = len(cell.overlaps_by('red'))
 
-			if green == blue == 2 and red > 0:
+			if green == greens and blue == blues and red > 0:
 				cell.good = True
 				for spot in cell.overlaps:
 					spot.good = True

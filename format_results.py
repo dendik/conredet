@@ -70,7 +70,8 @@ def print_distances(series):
 def print_pt_distances(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'
 		' spot2_color spot2_number spot2_volume spot_distance spot_overlap'
-		' territory_distance territory_overlap territory_volume')
+		' territory_distance territory_overlap territory_volume'
+		' territory_distance2 territory_overlap2')
 	for spot, other in iter_good_pairs(series):
 		territory_color = spot.territory_color()
 		print series.label, spot.cell.number,
@@ -78,7 +79,21 @@ def print_pt_distances(series):
 		print other.color, other.number, other.sizes[0],
 		print spot.distance(other), spot.occupancies[0, other.color],
 		print spot.e_distances[territory_color], spot.occupancies[0, territory_color],
-		print spot.territory_with(other).sizes[0]
+		print spot.territory_with(other).sizes[0],
+		print other.e_distances[territory_color], other.occupancies[0, territory_color],
+		print
+
+def print_one_t_distances(series):
+	print_header('label cell_number spot1_color spot1_number spot1_volume'
+		' territory_distance territory_overlap territory_volume')
+	for spot in iter_good_spots(series, blues=options.blues, greens=options.greens):
+		territory_color = spot.territory_color()
+		print series.label, spot.cell.number,
+		print spot.color, spot.number, spot.sizes[0],
+		print spot.e_distances[territory_color],
+		print spot.occupancies[0, territory_color],
+		print spot.territory_with(spot).sizes[0],
+		print
 
 def print_good_pairs(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'
@@ -137,14 +152,14 @@ def print_series(prefix, label=None):
 		if getattr(options, option_name, False):
 			function(series)
 
-def iter_good_spots(series):
-	series.mark_good()
+def iter_good_spots(series, greens=2, blues=2):
+	series.mark_good(greens=greens, blues=blues)
 	for spot in series.sorted_spots():
 		if spot.good:
 			yield spot
 
-def iter_good_cells(series):
-	series.mark_good()
+def iter_good_cells(series, greens=2, blues=2):
+	series.mark_good(greens=greens, blues=blues)
 	for cell in series.sorted_cells():
 		if cell.good:
 			yield cell
@@ -163,10 +178,13 @@ if __name__ == "__main__":
 	p.add_option("-a", "--all", action="store_true")
 	p.add_option("-p", "--with-prefix", action="store_true")
 	p.add_option("--distances", action="store_true")
+	p.add_option("--one-t-distances", action="store_true")
 	p.add_option("--pt-distances", action="store_true")
 	p.add_option("--good-pairs", action="store_true")
 	p.add_option("--cell-distances", action="store_true")
 	p.add_option("--cell-summary", action="store_true")
+	p.add_option("--greens", type=int, default=0, help="Number of greens in good cells")
+	p.add_option("--blues", type=int, default=0, help="Number of blues in good cells")
 	p.add_option("-v", "--verbose", action="store_true")
 	options, args = p.parse_args()
 	for prefix in args:
