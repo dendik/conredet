@@ -57,6 +57,7 @@ def highlight_series(prefix, image, image_out):
 			x, y, z = spot.coords
 			for r in range(options.radius, options.radius + 3):
 				draw.ellipse((x - r, y - r, x + r, y + r), outline=options.color)
+			draw.text((x - r - 10, y - r), '%s..' % spot.number, fill=(150, 150, 180))
 	img.save(join(prefix, image_out))
 
 def auto_highlight(prefix):
