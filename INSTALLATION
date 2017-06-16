@@ -1,0 +1,30 @@
+To install the web service on your own computer you need:
+
+- create a user & allocate a place for the code & the data writable by the user
+
+- create jobs folder (note: it will eat up several dozen gigabytes during server operation)
+
+- Edit config in wui.py to point to jobs folder (full path required)
+
+- install python 2.7 with packages:
+-- numpy
+-- scipy
+-- python-bioformats
+-- sloth
+
+- wget -O static/jquery.js https://code.jquery.com/jquery-3.2.1.min.js
+
+- Add apache configuration like this (this example is for apache 2.4):
+
+	WSGIDaemonProcess conredet user=conredet group=conredet
+	WSGIScriptAlias /conredet .../conredet/wui_wsgi.py
+	<Directory .../conredet>
+		WSGIProcessGroup conredet
+		WSGIApplicationGroup %{GLOBAL}
+		WSGIPassAuthorization On
+		WSGIScriptReloading On
+		Require all granted
+		Options +ExecCGI
+	</Directory>
+
+- Edit wui_wsgi.py, if you use virtualenv
