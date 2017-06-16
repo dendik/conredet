@@ -2,30 +2,29 @@ To install the web service on your own computer you need:
 
 - create a user & allocate a place for the code & the data writable by the user
 
-- create jobs folder (note: it will eat up several dozen gigabytes during server operation)
+- clone this repository using id of the created user
 
-- Edit config in wui.py to point to jobs folder (full path required)
+- check Makefile and see if all paths defined suit you
 
-- install python 2.7 with packages:
--- pip install numpy
--- pip install scipy
--- pip install python-bioformats sloth image tifffile flask
+	If you want to avoid using virtualenv, install required python packages by hand then
 
-- wget -O static/jquery.js https://code.jquery.com/jquery-3.2.1.min.js
+		touch pylibs # or remove the corresponding parts of Makefile
 
-- Add apache configuration like this (this example is for apache 2.4):
+- run make
 
-	WSGIDaemonProcess conredet user=conredet group=conredet
-	WSGIScriptAlias /conredet .../conredet/wui_wsgi.py
-	<Directory .../conredet>
-		WSGIProcessGroup conredet
-		WSGIApplicationGroup %{GLOBAL}
-		WSGIPassAuthorization On
-		WSGIScriptReloading On
-		Require all granted
-		Options +ExecCGI
-	</Directory>
+- Add web server configuration to use wui_wsgi.py as a WSGI script.
 
-- Edit wui_wsgi.py, if you use virtualenv
+	For apache 2.4 the config might look like this:
+
+		WSGIDaemonProcess conredet user=conredet group=conredet
+		WSGIScriptAlias /conredet .../conredet/wui_wsgi.py
+		<Directory .../conredet>
+			WSGIProcessGroup conredet
+			WSGIApplicationGroup %{GLOBAL}
+			WSGIPassAuthorization On
+			WSGIScriptReloading On
+			Require all granted
+			Options +ExecCGI
+		</Directory>
 
 - In a separate background process run ./wui_job.py -j /path/to/jobs/folder
