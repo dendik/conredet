@@ -308,7 +308,11 @@ def despeckle_images(images):
 def detect_signals(cube, options):
 	global images # XXX: the code is too messy to get images any other way
 	spots = Detectors(cube, options, images).spots
-	spots.filter_by_size(options.min_size, options.max_size)
+	if options.min_size and options.max_size:
+		spots.filter_by_size(options.min_size, options.max_size)
+	if options.mass_percentile and (options.min_mass or options.max_mass):
+		spots.filter_by_mass(options.mass_percentile,
+			options.min_mass, options.max_mass)
 	return spots
 
 class Detectors(object):
@@ -714,6 +718,12 @@ def option_parser():
 			type=int, help="Minimal size of spot")
 		p.add_option(color + "-max-size", default=500,
 			type=int, help="Maximal size of spot")
+		p.add_option(color + "-mass-percentile", default=0,
+			type=float, help="Percentile (0.0 to 1.0) of spot masses to use as reference")
+		p.add_option(color + "-min-mass", default=0.5,
+			type=float, help="Minimal relation of spot mass to percentile reference")
+		p.add_option(color + "-max-mass", default=2.,
+			type=float, help="Maximal relation of spot mass to percentile reference")
 		p.add_option(color + "-blur",
 			help="Apply filters. Either gauss(sigma) or peak(sigma, [side])")
 		p.add_option(color + "-despeckle", type=int,

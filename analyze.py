@@ -313,6 +313,21 @@ class Spots(object):
 			self.spots.append(spot)
 		return self
 
+	def filter_by_mass(self, percentile=0.5, min_ratio=0.5, max_ratio=2.0):
+		"""Retain only spots with mass similar to reference spot.
+
+		Reference spot is selected by `percentile` of spot masses and has mass M.
+		Retain spots that have mass within [M*min_ratio, M*max_ratio] range.
+		Return self.
+		"""
+		masses = [self.cube[spot.coords].sum() for spot in self.spots]
+		reference = np.percentile(masses, percentile)
+		self.spots = [ spot
+			for spot, mass in zip(self.spots, masses)
+			if min_ratio * reference <= mass <= max_ratio * reference
+		]
+		return self
+
 	def expanded(self, d=1):
 		"""Return set of spots expanded by `d` pixels in each direction."""
 		result = Spots(self.cube, images=self.images)
