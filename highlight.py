@@ -9,6 +9,7 @@ from os.path import join, basename
 p = optparse.OptionParser()
 p.add_option("-r", "--radius", default=30, type=int)
 p.add_option("-c", "--color", default="yellow")
+p.add_option("-t", "--text-color", default=(150, 150, 180))
 p.add_option("-i", "--image", default="img-bblue.png")
 p.add_option("-o", "--image-out", default="view-img-bblue.png")
 p.add_option("-d", "--distance", type=float, help="min distance between paired signals")
@@ -57,7 +58,7 @@ def highlight_series(prefix, image, image_out):
 			x, y, z = spot.coords
 			for r in range(options.radius, options.radius + 3):
 				draw.ellipse((x - r, y - r, x + r, y + r), outline=options.color)
-			draw.text((x - r - 10, y - r), '%s..' % spot.number, fill=(150, 150, 180))
+			draw.text((x-r-10, y-r), '%s..' % spot.number, fill=options.text_color)
 	img.save(join(prefix, image_out))
 
 def auto_highlight(prefix):
