@@ -719,7 +719,7 @@ def option_parser():
 		p.add_option(color + "-max-size", default=500,
 			type=int, help="Maximal size of spot")
 		p.add_option(color + "-mass-percentile", default=0,
-			type=float, help="Percentile (0.0 to 1.0) of spot masses to use as reference")
+			type=float, help="Percentile (0 to 100) of spot masses to use as reference")
 		p.add_option(color + "-min-mass", default=0.5,
 			type=float, help="Minimal relation of spot mass to percentile reference")
 		p.add_option(color + "-max-mass", default=2.,
