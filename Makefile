@@ -38,7 +38,7 @@ static/jquery.js:
 	
 static/jquery.panzoom.js:
 	$(WGET) -O $@ \
-		http://raw.github.com/timmywil/jquery.panzoom/2.0.5/dist/jquery.panzoom.min.js
+		https://github.com/timmywil/jquery.panzoom/raw/master/dist/jquery.panzoom.min.js
 
 static/jquery.mousewheel.js:
 	$(WGET) -O $@ \
