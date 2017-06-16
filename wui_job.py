@@ -219,6 +219,9 @@ class Job(object):
 		self.options[color + '2_role'] = 'core'
 		self.options[color + '2_max_size'] = 0
 		self.options[color + '2_min_size'] = 0
+		self.options[color + '2_mass_percentile'] = 0.8
+		self.options[color + '2_min_mass'] = 0.5
+		self.options[color + '2_max_mass'] = 1.5
 		self.options[color + '2_detect'] = (
 			'cylinders(n={n_cells}, radius={cell_radius}, wipe_radius={wipe})'
 			.format(wipe=int(wipe_multiplier * radius), **self.options)
