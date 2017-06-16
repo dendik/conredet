@@ -8,6 +8,7 @@ czifile.*
 __pycache__/
 *.pyc
 sloth/
+pylibs/
 
 # Temoprary & test stuff
 jobs/
