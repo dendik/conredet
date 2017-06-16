@@ -12,7 +12,7 @@ jobs-path:
 
 $(PYLIBS):
 	virtualenv -p python2 $(PYLIBS)
-	sed -ri "/virtualenv =/ s@= .*@'$(PYLIBS)'@; s@^# @@" wui_wsgi.py
+	sed -ri "/virtualenv =/ s@= .*@'$(PYLIBS)/bin/activate_this.py'@; s@^# @@" wui_wsgi.py
 	-#
 	pip install numpy
 	pip install scipy
