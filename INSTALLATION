@@ -7,10 +7,9 @@ To install the web service on your own computer you need:
 - Edit config in wui.py to point to jobs folder (full path required)
 
 - install python 2.7 with packages:
--- numpy
--- scipy
--- python-bioformats
--- sloth
+-- pip install numpy
+-- pip install scipy
+-- pip install python-bioformats sloth image tifffile flask
 
 - wget -O static/jquery.js https://code.jquery.com/jquery-3.2.1.min.js
 
@@ -28,3 +27,5 @@ To install the web service on your own computer you need:
 	</Directory>
 
 - Edit wui_wsgi.py, if you use virtualenv
+
+- In a separate background process run ./wui_job.py -j /path/to/jobs/folder
