@@ -483,7 +483,7 @@ class Images(object):
 		im_split = [im.split() for im in self.images]
 		im_shape = (len(self.images),) + tuple(reversed(self.images[0].size))
 		self.cubes = [
-			np.fromstring("".join(im.tostring() for im in images), 'uint8').reshape(im_shape)
+			np.frombytes("".join(im.tostring() for im in images), 'uint8').reshape(im_shape)
 			for images in zip(*im_split)
 		]
 		return self
@@ -498,7 +498,7 @@ class Images(object):
 		for c, cube in enumerate(self.cubes):
 			for z in range(cube.shape[0]):
 				shape = tuple(reversed(cube[z].shape))[:2]
-				im[c,z] = Image.fromstring("L", shape, cube[z].tostring())
+				im[c,z] = Image.frombytes("L", shape, cube[z].tostring())
 		self.images = [
 			Image.merge("RGB", (im[0,z], im[1,z], im[2,z]))
 			for z in range(cube.shape[0])
