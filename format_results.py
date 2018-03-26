@@ -95,6 +95,13 @@ def print_one_t_distances(series):
 		print spot.territory_with(spot).sizes[0],
 		print
 
+def print_pair_distances(series):
+	print_header('label cell_number spot_number spot_color spot_size'
+		' other_color other_size spot_other_occupancy')
+	for spot, other in iter_pairs(series):
+		print series.label, spot.cell.number, spot.number, spot.color, spot.sizes[0],
+		print other.color, other.sizes[0], spot.occupancies[0, other.color]
+
 def print_good_pairs(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'
 		' spot2_color spot2_number spot2_volume spot_distance spot_overlap')
@@ -170,6 +177,12 @@ def iter_good_pairs(series):
 		if spot.pair:
 			yield spot, spot.pair
 
+def iter_pairs(series):
+	series.mark_good_pairs()
+	for spot in series.sorted_spots():
+		if spot.pair:
+			yield spot, spot.pair
+
 if __name__ == "__main__":
 	p = optparse.OptionParser()
 	p.add_option("-g", "--good", action="store_true")
@@ -180,6 +193,7 @@ if __name__ == "__main__":
 	p.add_option("--distances", action="store_true")
 	p.add_option("--one-t-distances", action="store_true")
 	p.add_option("--pt-distances", action="store_true")
+	p.add_option("--pair-distances", action="store_true")
 	p.add_option("--good-pairs", action="store_true")
 	p.add_option("--cell-distances", action="store_true")
 	p.add_option("--cell-summary", action="store_true")
