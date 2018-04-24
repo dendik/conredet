@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps, ImageMath
+import numpy as np
 import results
 import optparse
 import math
@@ -13,6 +14,7 @@ p.add_option("-t", "--text-color", default=(150, 150, 180))
 p.add_option("-i", "--image", default="img-bblue.png")
 p.add_option("-o", "--image-out", default="view-img-bblue.png")
 p.add_option("-d", "--distance", type=float, help="min distance between paired signals")
+p.add_option("-n", "--normalize", action="store_const", const=5, help="Normalize colors by the way")
 p.add_option("-a", "--auto", action="store_true", help="Make up image/image-out for all colors")
 options, args = p.parse_args()
 
@@ -51,7 +53,7 @@ def is_highlightable(spot):
 def highlight_series(prefix, image, image_out):
 	series = results.Series(prefix)
 	series.mark_good()
-	img = Image.open(join(prefix, image)).convert('RGB')
+	img = possibly_normalize(Image.open(join(prefix, image)).convert('RGB'))
 	draw = ImageDraw.Draw(img)
 	for spot in sorted(series.spots.values()):
 		if is_highlightable(spot):
@@ -66,6 +68,18 @@ def auto_highlight(prefix):
 		image = basename(image)
 		print image
 		highlight_series(prefix, image, 'highlight-' + image)
+
+def possibly_normalize(image):
+	if options.normalize is not None:
+		#image = ImageOps.autocontrast(image, cutoff=options.normalize)
+		image = image_math(ImageOps.equalize(image), lambda x: x ** options.normalize)
+	return image
+
+def image_math(image, math):
+		data = np.asarray(image).astype('float') / 255
+		data = math(data)
+		image = Image.fromarray((data * 255).astype('uint8'))
+		return image
 
 for prefix in args:
 	print "Processing", prefix
