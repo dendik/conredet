@@ -97,10 +97,12 @@ def print_one_t_distances(series):
 
 def print_pair_distances(series):
 	print_header('label cell_number spot_number spot_color spot_size'
-		' other_color other_size spot_other_occupancy')
+		' other_color other_size spot_distance spot_other_occupancy')
 	for spot, other in iter_pairs(series):
-		print series.label, spot.cell.number, spot.number, spot.color, spot.sizes[0],
-		print other.color, other.sizes[0], spot.occupancies[0, other.color]
+		print series.label, spot.cell.number, spot.number,
+		print spot.color, spot.sizes[0], other.color, other.sizes[0],
+		print spot.distance(other), spot.occupancies[0, other.color],
+		print
 
 def print_good_pairs(series):
 	print_header('label cell_number spot1_color spot1_number spot1_volume'
